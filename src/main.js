@@ -51,6 +51,10 @@ const ui = {
   steeringKnob: document.querySelector('#steering-knob'),
   cruiseToggle: document.querySelector('#cruise-toggle'),
   mobileCoach: document.querySelector('#mobile-coach'),
+  layoutToggle: document.querySelector('#layout-toggle'),
+  layoutToggleLabel: document.querySelector('#layout-toggle-label'),
+  controlSettings: document.querySelector('#control-settings'),
+  controlSettingsClose: document.querySelector('#control-settings-close'),
 };
 
 const scene = new THREE.Scene();
@@ -636,6 +640,7 @@ for (const side of [-1, 1]) addPart(nitroFlames, new THREE.ConeGeometry(.16, .95
 nitroFlames.visible = false; car.add(nitroFlames);
 
 let garageOpen = false;
+let controlSettingsOpen = false;
 const categories = ['All', ...new Set(VEHICLES.map(vehicle => vehicle.category))];
 function renderGarage() {
   for (const category of categories) {
@@ -688,6 +693,8 @@ const controls = { throttle: false, brake: false, left: false, right: false, han
 const mobileInput = { steer: 0, pointerId: null, cruise: false };
 const keyMap = { KeyW: 'throttle', ArrowUp: 'throttle', KeyS: 'brake', ArrowDown: 'brake', KeyA: 'right', ArrowLeft: 'right', KeyD: 'left', ArrowRight: 'left', Space: 'handbrake' };
 addEventListener('keydown', event => {
+  if (controlSettingsOpen && event.code === 'Escape' && !event.repeat) { setControlSettings(false); event.preventDefault(); return; }
+  if (controlSettingsOpen) return;
   if ((event.code === 'KeyG' || event.code === 'Escape') && !event.repeat) { if (event.code === 'KeyG' || garageOpen) setGarage(!garageOpen); event.preventDefault(); return; }
   if (garageOpen) return;
   if (event.code === 'KeyR' && !event.repeat) restartRace();
@@ -703,6 +710,16 @@ function setSteering(clientX) {
 function resetSteeringPad() {
   mobileInput.steer = 0; mobileInput.pointerId = null; ui.steeringPad.classList.remove('active'); ui.steeringPad.setAttribute('aria-valuenow', '0'); ui.steeringKnob.style.transform = 'translate(0, -50%)';
 }
+function setControlLayout(layout, persist = true) {
+  const safeLayout = layout === 'right' ? 'right' : 'left'; document.body.dataset.controlLayout = safeLayout; ui.layoutToggleLabel.textContent = safeLayout === 'right' ? 'STEER RIGHT' : 'STEER LEFT';
+  document.querySelectorAll('[data-layout]').forEach(option => { const selected = option.dataset.layout === safeLayout; option.classList.toggle('selected', selected); option.setAttribute('aria-pressed', String(selected)); });
+  resetSteeringPad();
+  if (persist) { try { localStorage.setItem('apex-control-layout', safeLayout); } catch { /* Device storage can be unavailable in private contexts. */ } }
+}
+function setControlSettings(open) {
+  controlSettingsOpen = open; ui.controlSettings.classList.toggle('hidden', !open); ui.controlSettings.setAttribute('aria-hidden', String(!open)); ui.layoutToggle.setAttribute('aria-expanded', String(open));
+  if (open) { Object.keys(controls).forEach(key => { controls[key] = false; }); resetSteeringPad(); ui.controlSettingsClose.focus(); } else ui.layoutToggle.focus();
+}
 ui.steeringPad.addEventListener('pointerdown', event => {
   if (mobileInput.pointerId !== null) return; event.preventDefault(); mobileInput.pointerId = event.pointerId; ui.steeringPad.classList.add('active'); ui.steeringPad.setPointerCapture(event.pointerId); setSteering(event.clientX); hideMobileCoach();
 });
@@ -710,6 +727,11 @@ ui.steeringPad.addEventListener('pointermove', event => { if (event.pointerId ==
 const releaseSteering = event => { if (event.pointerId !== mobileInput.pointerId) return; if (ui.steeringPad.hasPointerCapture(event.pointerId)) ui.steeringPad.releasePointerCapture(event.pointerId); resetSteeringPad(); };
 ui.steeringPad.addEventListener('pointerup', releaseSteering); ui.steeringPad.addEventListener('pointercancel', releaseSteering); ui.steeringPad.addEventListener('lostpointercapture', resetSteeringPad);
 ui.cruiseToggle.addEventListener('click', () => { mobileInput.cruise = !mobileInput.cruise; ui.cruiseToggle.classList.toggle('active', mobileInput.cruise); ui.cruiseToggle.setAttribute('aria-pressed', String(mobileInput.cruise)); hideMobileCoach(); });
+ui.layoutToggle.addEventListener('click', () => { setControlSettings(true); hideMobileCoach(); });
+ui.controlSettingsClose.addEventListener('click', () => setControlSettings(false));
+ui.controlSettings.addEventListener('click', event => { if (event.target === ui.controlSettings) setControlSettings(false); });
+document.querySelectorAll('[data-layout]').forEach(option => option.addEventListener('click', () => { setControlLayout(option.dataset.layout); setControlSettings(false); }));
+try { setControlLayout(localStorage.getItem('apex-control-layout'), false); } catch { setControlLayout('left', false); }
 addEventListener('blur', () => { Object.keys(controls).forEach(key => { controls[key] = false; }); resetSteeringPad(); });
 document.querySelectorAll('[data-control]').forEach(button => {
   const control = button.dataset.control;
@@ -917,7 +939,7 @@ function revealGame() {
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
-  if (bootReady && !garageOpen) {
+  if (bootReady && !garageOpen && !controlSettingsOpen) {
     if (state.phase === 'countdown') {
       state.countdown -= dt;
       if (state.countdown > 0) setCountdown(String(Math.ceil(state.countdown)), 'GET READY');

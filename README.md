@@ -25,7 +25,7 @@ npm run build
 - **Space**: handbrake / drift
 - **R**: restart the race
 - **G**: open the vehicle garage
-- Touch controls appear on mobile and touch-capable devices: drag the left analog pad to steer, hold **GO** to accelerate, use **BRAKE** for braking/reverse, and hold **DRIFT** for the handbrake. **AUTO** toggles cruise acceleration so the right thumb can focus on braking and drift.
+- Touch controls appear on mobile and touch-capable devices: drag the analog pad to steer, hold **GO** to accelerate, use **BRAKE** for braking/reverse, and hold **DRIFT** for the handbrake. **AUTO** toggles cruise acceleration. Tap the **STEER LEFT / STEER RIGHT** layout control to mirror the pad, pedals, cruise button, and speed readout; the preference is saved on the device.
 
 ## Vehicle garage
 

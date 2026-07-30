@@ -26,7 +26,7 @@
       @media (prefers-reduced-motion: reduce) { .boot-progress i { animation: none; width: 68%; } #boot-loader { transition-duration: .15s; } }
     </style>
   </head>
-  <body class="is-loading">
+  <body class="is-loading" data-control-layout="left">
     <div id="boot-loader" role="status" aria-live="polite" aria-label="Loading Apex Circuit">
       <div class="boot-inner">
         <span class="boot-kicker">APEX MOTORSPORT / 01</span>
@@ -101,6 +101,7 @@
 
     <div id="mobile-coach" class="mobile-coach"><span class="coach-dot"></span> Drag to steer <i>·</i> Hold GO <i>·</i> Tap AUTO for cruise</div>
     <div class="touch-controls" aria-label="Touch driving controls">
+      <button id="layout-toggle" class="layout-toggle" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="layout-toggle-icon">⇄</span><span id="layout-toggle-label">STEER LEFT</span></button>
       <div id="steering-pad" class="steering-pad" role="slider" tabindex="0" aria-label="Analog steering" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
         <div class="steering-track"><span class="steer-arrow left">‹</span><span class="steer-arrow right">›</span><span id="steering-knob" class="steering-knob"><i></i></span></div>
         <span class="control-caption">STEER</span>
@@ -110,6 +111,17 @@
         <button class="touch-button handbrake" data-control="handbrake" aria-label="Handbrake"><span>DRIFT</span><small>HOLD</small></button>
         <button class="touch-button brake" data-control="brake" aria-label="Brake"><span>BRAKE</span><small>REVERSE</small></button>
         <button class="touch-button throttle" data-control="throttle" aria-label="Accelerate"><span>GO</span><small>HOLD</small></button>
+      </div>
+    </div>
+
+    <div id="control-settings" class="control-settings-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="control-settings-title" aria-hidden="true">
+      <div class="control-settings-card">
+        <div class="control-settings-header"><div><span class="finish-kicker">DRIVER SETUP</span><h2 id="control-settings-title">Control layout</h2><p>Choose the thumb arrangement that feels natural.</p></div><button id="control-settings-close" class="garage-close" type="button" aria-label="Close control settings">×</button></div>
+        <div class="layout-options" aria-label="Control layout presets">
+          <button class="layout-option selected" type="button" data-layout="left" aria-pressed="true"><span class="layout-preview"><i class="preview-steer">◉</i><i class="preview-pedals"><b></b><b></b></i></span><strong>Left steer</strong><small>Pedals on the right</small><span class="layout-check" aria-hidden="true">SELECTED</span></button>
+          <button class="layout-option" type="button" data-layout="right" aria-pressed="false"><span class="layout-preview mirrored"><i class="preview-steer">◉</i><i class="preview-pedals"><b></b><b></b></i></span><strong>Right steer</strong><small>Pedals on the left</small><span class="layout-check" aria-hidden="true">SELECTED</span></button>
+        </div>
+        <div class="control-settings-note"><span class="coach-dot"></span> Saved on this device. The race is paused while setup is open.</div>
       </div>
     </div>
 
