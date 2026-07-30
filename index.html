@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#102231" />
+    <meta name="description" content="A small, sunlit arcade racing game built with Three.js." />
+    <title>Apex Circuit — Arcade Racer</title>
+    <style>
+      html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #102231; }
+      body.is-loading > :not(#boot-loader):not(script) { visibility: hidden; }
+      #boot-loader { position: fixed; inset: 0; z-index: 999; display: grid; place-items: center; overflow: hidden; color: #f8f5ed; background: radial-gradient(circle at 52% 38%, #244858 0%, #142d3c 42%, #0a1b28 100%); font-family: Impact, 'Arial Narrow', sans-serif; transition: opacity .48s ease, visibility .48s ease; }
+      #boot-loader::before { content: ''; position: absolute; width: 130vmax; height: 34vmax; left: -16vmax; top: 28%; border-top: 1px solid rgba(248,245,237,.08); border-bottom: 1px solid rgba(248,245,237,.06); transform: rotate(-10deg); }
+      #boot-loader::after { content: ''; position: absolute; inset: 0; opacity: .16; background: repeating-linear-gradient(90deg, transparent 0, transparent 59px, rgba(248,245,237,.09) 60px, transparent 61px); }
+      .boot-inner { position: relative; z-index: 1; width: min(380px, calc(100% - 48px)); }
+      .boot-kicker { display: block; margin-bottom: 18px; color: #ff9f80; font: 500 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .26em; }
+      .boot-brand { display: flex; align-items: center; gap: 13px; font-size: clamp(52px, 12vw, 78px); line-height: .8; font-style: italic; letter-spacing: -.025em; }
+      .boot-mark { width: 55px; height: 60px; display: grid; place-items: center; color: #102231; background: #ff633c; clip-path: polygon(24% 0, 100% 0, 78% 100%, 0 100%); font: 700 36px Impact, sans-serif; font-style: normal; padding-right: 3px; }
+      .boot-brand small { display: block; color: #ff9f80; margin-top: 9px; font: 500 11px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .39em; font-style: normal; }
+      .boot-progress { position: relative; height: 3px; margin-top: 42px; overflow: hidden; background: rgba(248,245,237,.14); }
+      .boot-progress i { position: absolute; inset: 0 auto 0 0; width: 42%; background: #ff633c; animation: boot-sweep 1.05s cubic-bezier(.5,0,.25,1) infinite; }
+      .boot-meta { display: flex; justify-content: space-between; margin-top: 11px; color: #9fb5c0; font: 500 9px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .13em; }
+      .boot-meta span:last-child { color: #ff9f80; }
+      body:not(.is-loading) #boot-loader { opacity: 0; visibility: hidden; pointer-events: none; }
+      @keyframes boot-sweep { 0% { transform: translateX(-110%); } 55% { transform: translateX(100%); } 100% { transform: translateX(255%); } }
+      @media (prefers-reduced-motion: reduce) { .boot-progress i { animation: none; width: 68%; } #boot-loader { transition-duration: .15s; } }
+    </style>
+  </head>
+  <body class="is-loading">
+    <div id="boot-loader" role="status" aria-live="polite" aria-label="Loading Apex Circuit">
+      <div class="boot-inner">
+        <span class="boot-kicker">APEX MOTORSPORT / 01</span>
+        <div class="boot-brand"><span class="boot-mark">A</span><span>APEX<small>CIRCUIT</small></span></div>
+        <div class="boot-progress"><i></i></div>
+        <div class="boot-meta"><span>PREPARING CIRCUIT</span><span>PLEASE WAIT</span></div>
+      </div>
+    </div>
+    <div id="game"></div>
+
+    <div class="vignette" aria-hidden="true"></div>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">A</span><span>APEX<small>CIRCUIT</small></span></div>
+      <div class="top-actions">
+        <div class="race-status"><span class="status-dot"></span><span id="race-label">GRID READY</span></div>
+        <button id="garage-toggle" class="garage-trigger" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="garage-trigger-label">GARAGE</span><strong id="vehicle-name">Apex GT</strong><span class="garage-arrow">↗</span></button>
+      </div>
+    </header>
+
+    <section class="hud" aria-label="Race information">
+      <div class="hud-card position-card"><span class="eyebrow">POSITION</span><strong><span id="position">1</span><em>/ 4</em></strong></div>
+      <div class="hud-card lap-card"><span class="eyebrow">LAP</span><strong><span id="lap">1</span><em>/ 3</em></strong></div>
+      <div class="hud-card timer-card"><span class="eyebrow">RACE TIME</span><strong id="timer">00:00.000</strong><span class="best-label">BEST <span id="best">--:--.---</span></span></div>
+    </section>
+
+    <aside class="race-tower" aria-label="Live race order">
+      <div class="tower-heading"><span>LIVE ORDER</span><span class="tower-live"><i></i> 4 RACERS</span></div>
+      <div id="standings" class="standings"></div>
+    </aside>
+
+    <section class="systems-panel" aria-label="Vehicle systems">
+      <div class="system-row"><span class="system-label">FUEL</span><div class="system-meter"><i id="fuel-bar"></i></div><strong id="fuel-value">100%</strong></div>
+      <div class="system-row time-bank"><span class="system-label">TIME BANK</span><strong id="time-bank">02:00</strong><span class="system-note">REMAINING</span></div>
+      <div id="effect-chips" class="effect-chips" aria-live="polite"></div>
+    </section>
+    <div id="pickup-toast" class="pickup-toast hidden" role="status" aria-live="polite"><span id="pickup-symbol" class="pickup-symbol">N</span><div><span id="pickup-title">NITRO</span><small id="pickup-detail">BOOST ENGAGED</small></div></div>
+
+    <div class="speedometer" aria-label="Speed">
+      <svg class="speed-ring" viewBox="0 0 160 160" aria-hidden="true">
+        <circle class="speed-track" cx="80" cy="80" r="68" />
+        <circle id="speed-arc" class="speed-arc" cx="80" cy="80" r="68" />
+      </svg>
+      <div class="speed-readout"><span id="speed">0</span><small>KM/H</small></div>
+      <div id="gear" class="gear">N</div>
+    </div>
+
+    <div class="controls-hint"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> DRIVE</span><span><kbd>SPACE</kbd> DRIFT</span><span><kbd>R</kbd> RESTART</span><span><kbd>G</kbd> GARAGE</span></div>
+
+    <div id="countdown" class="countdown" aria-live="polite"><span id="countdown-value">3</span><small id="countdown-caption">GET READY</small></div>
+    <div id="finish" class="finish-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="finish-title">
+      <div class="finish-card">
+        <span class="finish-kicker">CHECKERED FLAG</span>
+        <h1 id="finish-title">Race complete</h1>
+        <p id="finish-description">You carved through three laps of Apex Circuit.</p>
+        <div class="finish-rank"><span>FINAL POSITION</span><strong id="finish-position">P1</strong><em id="finish-field">/ 4</em></div>
+        <div class="finish-times"><div><span>TOTAL TIME</span><strong id="finish-time">00:00.000</strong></div><div><span>BEST LAP</span><strong id="finish-best">00:00.000</strong></div></div>
+        <button id="restart" class="restart-button" type="button">Race again <span>↗</span></button>
+      </div>
+    </div>
+
+    <div id="garage" class="garage-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="garage-title" aria-hidden="true">
+      <div class="garage-panel">
+        <div class="garage-header">
+          <div><span class="finish-kicker">APEX MOTOR POOL</span><h2 id="garage-title">Choose your ride</h2><p>Eight procedural machines. One circuit. Pick a class and make it yours.</p></div>
+          <button id="garage-close" class="garage-close" type="button" aria-label="Close garage">×</button>
+        </div>
+        <div id="garage-filters" class="garage-filters" aria-label="Vehicle categories"></div>
+        <div id="vehicle-grid" class="vehicle-grid" aria-label="Available vehicles"></div>
+        <div class="garage-footer"><span>Vehicle selection starts a new race.</span><span>Branded models are stylized procedural interpretations, without manufacturer logos or affiliation.</span></div>
+      </div>
+    </div>
+
+    <div id="mobile-coach" class="mobile-coach"><span class="coach-dot"></span> Drag to steer <i>·</i> Hold GO <i>·</i> Tap AUTO for cruise</div>
+    <div class="touch-controls" aria-label="Touch driving controls">
+      <div id="steering-pad" class="steering-pad" role="slider" tabindex="0" aria-label="Analog steering" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
+        <div class="steering-track"><span class="steer-arrow left">‹</span><span class="steer-arrow right">›</span><span id="steering-knob" class="steering-knob"><i></i></span></div>
+        <span class="control-caption">STEER</span>
+      </div>
+      <div class="pedal-cluster">
+        <button id="cruise-toggle" class="cruise-toggle" type="button" aria-pressed="false"><span class="cruise-light"></span>AUTO</button>
+        <button class="touch-button handbrake" data-control="handbrake" aria-label="Handbrake"><span>DRIFT</span><small>HOLD</small></button>
+        <button class="touch-button brake" data-control="brake" aria-label="Brake"><span>BRAKE</span><small>REVERSE</small></button>
+        <button class="touch-button throttle" data-control="throttle" aria-label="Accelerate"><span>GO</span><small>HOLD</small></button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
