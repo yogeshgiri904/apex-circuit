@@ -62,7 +62,23 @@
       <div class="system-row time-bank"><span class="system-label">TIME BANK</span><strong id="time-bank">02:00</strong><span class="system-note">REMAINING</span></div>
       <div id="effect-chips" class="effect-chips" aria-live="polite"></div>
     </section>
+    <aside id="habitat-panel" class="habitat-panel" aria-label="Wildlife reserve status">
+      <div class="habitat-heading"><span class="habitat-leaf">✦</span><span>MEADOW RESERVE</span><i>LIVE</i></div>
+      <div class="habitat-reading"><strong id="wildlife-count">12/12</strong><span id="habitat-status">WILDLIFE ACTIVE</span></div>
+      <small>Ease off near animal crossings</small>
+    </aside>
     <div id="pickup-toast" class="pickup-toast hidden" role="status" aria-live="polite"><span id="pickup-symbol" class="pickup-symbol">N</span><div><span id="pickup-title">NITRO</span><small id="pickup-detail">BOOST ENGAGED</small></div></div>
+    <div id="wildlife-toast" class="wildlife-toast hidden" role="status" aria-live="polite"><span id="wildlife-symbol" class="wildlife-symbol">✦</span><div><span id="wildlife-title">WILDLIFE NEARBY</span><small id="wildlife-detail">BRAKE FOR CROSSINGS</small></div></div>
+
+    <aside id="signal-guide" class="signal-guide" aria-label="Hacker monument signal">
+      <span class="signal-compass"><i id="signal-arrow">↑</i></span>
+      <div class="signal-copy"><span class="signal-kicker">HACKER MONUMENT</span><strong id="signal-distance">-- m</strong><small id="signal-status">FOLLOW THE CYAN BEACON</small></div>
+    </aside>
+    <section id="monument-prompt" class="monument-prompt hidden" aria-hidden="true" aria-label="Hacker monument link">
+      <div class="monument-prompt-top"><span class="signal-pulse"></span><span>SIGNAL LOCKED</span><span class="monument-coordinates">NODE / 00</span></div>
+      <div class="monument-prompt-body"><div class="monument-glyph" aria-hidden="true">&gt;_</div><div><span class="monument-eyebrow">THE MAKER'S TERMINAL</span><strong>Yogesh Giri</strong><small>Parked at the hacker monument</small></div></div>
+      <a id="github-link" class="github-link" href="https://github.com/yogeshgiri904" target="_blank" rel="noopener noreferrer"><span>Open GitHub profile</span><span aria-hidden="true">↗</span></a>
+    </section>
 
     <div class="speedometer" aria-label="Speed">
       <svg class="speed-ring" viewBox="0 0 160 160" aria-hidden="true">

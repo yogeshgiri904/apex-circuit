@@ -40,11 +40,17 @@ Six procedural pickup families appear around the racing line and respawn after c
 - **Nitro**: short overdrive and speed impulse
 - **Time bank**: adds 12 seconds to the race reserve
 - **Fuel cell**: restores 35% fuel
-- **Wings**: temporary low-flight and softer barrier impacts
-- **Shield**: protects against rival and barrier contact
+- **Wings**: temporary low-flight and agile handling
+- **Shield**: protects against rival contact
 - **Grip**: sharper, more planted cornering
 
 Fuel and the two-minute time bank are shown in the systems panel. Running out of fuel leaves a reduced limp mode; running out of time ends the attempt. Active effects and pickup confirmations are shown in the HUD.
+
+The asphalt is now an open racing line with no curbs, guardrails, shoulder collision, or off-road speed penalty. Drivers can leave the circuit and cross the meadow freely. Competitive checkpoint progress is counted only near the racing surface. A cyan beacon marks the procedural hacker monument in the center of the infield; drive beside it to unlock a deliberate link to [Yogesh Giri's GitHub profile](https://github.com/yogeshgiri904).
+
+## Meadow reserve
+
+The circuit sits in a procedural valley with faceted mountain and hill silhouettes, two lakes and an infield pond, animated ripples, lily pads, reeds, broadleaf groves, conifers, herb clumps, and wildflowers. Deer, rabbits, dogs, and cats wander and flee from approaching vehicles. Moderate impacts leave an animal resting and injured temporarily; a critical high-speed impact causes a non-graphic collapse and fade for the remainder of the race. Impacts slow the vehicle and deduct time, while the reserve panel and alert toast make the consequence visible. Restarting the race restores the wildlife population.
 
 ## Vercel
 

@@ -47,6 +47,18 @@ const ui = {
   pickupSymbol: document.querySelector('#pickup-symbol'),
   pickupTitle: document.querySelector('#pickup-title'),
   pickupDetail: document.querySelector('#pickup-detail'),
+  habitatPanel: document.querySelector('#habitat-panel'),
+  wildlifeCount: document.querySelector('#wildlife-count'),
+  habitatStatus: document.querySelector('#habitat-status'),
+  wildlifeToast: document.querySelector('#wildlife-toast'),
+  wildlifeSymbol: document.querySelector('#wildlife-symbol'),
+  wildlifeTitle: document.querySelector('#wildlife-title'),
+  wildlifeDetail: document.querySelector('#wildlife-detail'),
+  signalGuide: document.querySelector('#signal-guide'),
+  signalArrow: document.querySelector('#signal-arrow'),
+  signalDistance: document.querySelector('#signal-distance'),
+  signalStatus: document.querySelector('#signal-status'),
+  monumentPrompt: document.querySelector('#monument-prompt'),
   steeringPad: document.querySelector('#steering-pad'),
   steeringKnob: document.querySelector('#steering-knob'),
   cruiseToggle: document.querySelector('#cruise-toggle'),
@@ -58,7 +70,7 @@ const ui = {
 };
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x94c4d2, 105, 285);
+scene.fog = new THREE.Fog(0x9fc9d0, 135, 360);
 const camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.1, 500);
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 function pixelRatioCap() { return matchMedia('(pointer: coarse)').matches ? 1.5 : 1.75; }
@@ -94,8 +106,8 @@ const sky = new THREE.Mesh(
     depthWrite: false,
     fog: false,
     uniforms: { top: { value: new THREE.Color(0x4a91c4) }, horizon: { value: new THREE.Color(0xc9e4de) } },
-    vertexShader: 'varying vec3 vWorld; void main(){ vec4 p=modelMatrix*vec4(position,1.0); vWorld=p.xyz; gl_Position=projectionMatrix*viewMatrix*p; }',
-    fragmentShader: 'uniform vec3 top; uniform vec3 horizon; varying vec3 vWorld; void main(){ float h=clamp(normalize(vWorld).y*0.85+0.18,0.0,1.0); gl_FragColor=vec4(mix(horizon,top,pow(h,0.65)),1.0); }',
+    vertexShader: 'varying vec3 vDirection; void main(){ vDirection=normalize(position); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+    fragmentShader: 'uniform vec3 top; uniform vec3 horizon; varying vec3 vDirection; void main(){ float h=clamp(vDirection.y*0.85+0.18,0.0,1.0); gl_FragColor=vec4(mix(horizon,top,pow(h,0.65)),1.0); }',
   }),
 );
 scene.add(sky);
@@ -103,14 +115,11 @@ const sun = new THREE.Mesh(new THREE.SphereGeometry(7, 20, 16), new THREE.MeshBa
 sun.position.set(-150, 130, -190);
 scene.add(sun);
 
-const ground = new THREE.Mesh(new THREE.CircleGeometry(230, 80), new THREE.MeshStandardMaterial({ color: 0x7d9b60, roughness: 1 }));
+// The meadow is intentionally much larger than the race area: leaving the asphalt is free-roam, not a collision.
+const ground = new THREE.Mesh(new THREE.CircleGeometry(10000, 80), new THREE.MeshStandardMaterial({ color: 0x88a66a, roughness: 1 }));
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
-const distantGround = new THREE.Mesh(new THREE.RingGeometry(210, 340, 80), new THREE.MeshBasicMaterial({ color: 0x779765 }));
-distantGround.rotation.x = -Math.PI / 2;
-distantGround.position.y = -0.05;
-scene.add(distantGround);
 
 // A closed, asymmetric circuit gives the car a few distinct corners without a large world.
 const curve = new THREE.CatmullRomCurve3([
@@ -167,57 +176,9 @@ function ribbon(width, y, material, inset = 0) {
   return mesh;
 }
 
-ribbon(TRACK_WIDTH + 4.4, 0.018, new THREE.MeshStandardMaterial({ color: 0xb9aa7b, roughness: 1 }));
 ribbon(TRACK_WIDTH, 0.038, new THREE.MeshStandardMaterial({ color: 0x293b45, roughness: 0.94 }));
 
-function createCurb() {
-  const positions = [], colors = [], indices = [];
-  const red = new THREE.Color(0xe8573a), white = new THREE.Color(0xf4eee0);
-  for (let i = 0; i < SAMPLE_COUNT; i++) {
-    const a = samples[i], b = samples[(i + 1) % SAMPLE_COUNT];
-    const color = Math.floor(i / 3) % 2 ? red : white;
-    for (const side of [-1, 1]) {
-      const inner = TRACK_WIDTH / 2 - 0.04, outer = TRACK_WIDTH / 2 + 0.82;
-      const base = positions.length / 3;
-      positions.push(a.x + a.rx * inner * side, 0.055, a.z + a.rz * inner * side,
-        a.x + a.rx * outer * side, 0.065, a.z + a.rz * outer * side,
-        b.x + b.rx * inner * side, 0.055, b.z + b.rz * inner * side,
-        b.x + b.rx * outer * side, 0.065, b.z + b.rz * outer * side);
-      for (let j = 0; j < 4; j++) colors.push(color.r, color.g, color.b);
-      indices.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
-    }
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geometry.setIndex(indices); geometry.computeVertexNormals();
-  const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .88 }));
-  mesh.receiveShadow = true; scene.add(mesh);
-}
-createCurb();
-
 const dummy = new THREE.Object3D();
-const rails = new THREE.InstancedMesh(new THREE.BoxGeometry(.18, .34, 1), new THREE.MeshStandardMaterial({ color: 0xdce3de, metalness: .38, roughness: .48 }), SAMPLE_COUNT * 2);
-const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(.22, .85, .22), new THREE.MeshStandardMaterial({ color: 0x7c8c8b, metalness: .3, roughness: .7 }), Math.ceil(SAMPLE_COUNT / 4) * 2);
-let railIndex = 0, postIndex = 0;
-for (let i = 0; i < SAMPLE_COUNT; i++) {
-  const a = samples[i], b = samples[(i + 1) % SAMPLE_COUNT];
-  for (const side of [-1, 1]) {
-    const offset = TRACK_WIDTH / 2 + 1.38;
-    const ax = a.x + a.rx * offset * side, az = a.z + a.rz * offset * side;
-    const bx = b.x + b.rx * offset * side, bz = b.z + b.rz * offset * side;
-    dummy.position.set((ax + bx) / 2, .66, (az + bz) / 2);
-    dummy.rotation.set(0, Math.atan2(bx - ax, bz - az), 0);
-    dummy.scale.set(1, 1, Math.hypot(bx - ax, bz - az) + .08);
-    dummy.updateMatrix(); rails.setMatrixAt(railIndex++, dummy.matrix);
-    if (i % 4 === 0) {
-      dummy.position.set(ax, .42, az); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1);
-      dummy.updateMatrix(); posts.setMatrixAt(postIndex++, dummy.matrix);
-    }
-  }
-}
-rails.castShadow = true; rails.receiveShadow = true; posts.castShadow = true;
-scene.add(rails, posts);
 
 const dash = new THREE.InstancedMesh(new THREE.BoxGeometry(.18, .018, 1.65), new THREE.MeshStandardMaterial({ color: 0xe4dcbf, roughness: 1 }), Math.floor(SAMPLE_COUNT / 5));
 let dashIndex = 0;
@@ -239,6 +200,70 @@ function nearestTrack(x, z) {
 // Deterministic scenery keeps the scene small and repeatable.
 let seed = 7919;
 function random() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+
+const WATER_BODIES = [
+  { x: -101, z: 38, rx: 24, rz: 14, phase: .2 },
+  { x: 105, z: -25, rx: 19, rz: 11, phase: 1.7 },
+  { x: 31, z: 15, rx: 11.5, rz: 7.2, phase: 3.1 },
+];
+function inWaterZone(x, z, padding = 0) {
+  return WATER_BODIES.some(water => ((x - water.x) / (water.rx + padding)) ** 2 + ((z - water.z) / (water.rz + padding)) ** 2 < 1);
+}
+function organicPondShape(rx, rz, phase) {
+  const shape = new THREE.Shape();
+  for (let i = 0; i <= 36; i++) {
+    const angle = i / 36 * TAU, wobble = 1 + Math.sin(angle * 3 + phase) * .055 + Math.sin(angle * 5 - phase) * .035;
+    const x = Math.cos(angle) * rx * wobble, y = Math.sin(angle) * rz * wobble;
+    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+  }
+  shape.closePath(); return shape;
+}
+const waterMaterial = new THREE.MeshStandardMaterial({ color: 0x4ea7a7, emissive: 0x153f42, emissiveIntensity: .22, metalness: .24, roughness: .3, transparent: true, opacity: .92 });
+const shoreMaterial = new THREE.MeshStandardMaterial({ color: 0xc1b985, roughness: 1 });
+const lilyMaterial = new THREE.MeshStandardMaterial({ color: 0x65976e, roughness: .9 });
+const rippleMaterial = new THREE.MeshBasicMaterial({ color: 0xc0ebe4, transparent: true, opacity: .35, depthWrite: false });
+const waterRipples = [];
+for (const water of WATER_BODIES) {
+  const shape = organicPondShape(water.rx, water.rz, water.phase), geometry = new THREE.ShapeGeometry(shape, 1);
+  const shore = new THREE.Mesh(geometry, shoreMaterial); shore.rotation.x = -Math.PI / 2; shore.position.set(water.x, .009, water.z); shore.scale.set(1.1, 1.1, 1); shore.receiveShadow = true; scene.add(shore);
+  const surface = new THREE.Mesh(geometry, waterMaterial); surface.rotation.x = -Math.PI / 2; surface.position.set(water.x, .026, water.z); surface.receiveShadow = true; scene.add(surface);
+  for (let i = 0; i < 3; i++) {
+    const ripple = new THREE.Mesh(new THREE.TorusGeometry(1, .025, 5, 32), rippleMaterial.clone()); ripple.rotation.x = Math.PI / 2;
+    ripple.position.set(water.x + (i - 1) * water.rx * .31, .044, water.z + Math.sin(i * 2 + water.phase) * water.rz * .28); scene.add(ripple); waterRipples.push({ mesh: ripple, phase: water.phase + i * 1.7 });
+  }
+  for (let i = 0; i < 7; i++) {
+    const angle = water.phase + i * 2.37, radius = .35 + (i % 3) * .13;
+    const lily = new THREE.Mesh(new THREE.CircleGeometry(.35 + (i % 3) * .12, 7), lilyMaterial); lily.rotation.x = -Math.PI / 2; lily.position.set(water.x + Math.cos(angle) * water.rx * radius, .048, water.z + Math.sin(angle) * water.rz * radius); scene.add(lily);
+    if (i % 3 === 0) { const flower = new THREE.Mesh(new THREE.SphereGeometry(.11, 7, 5), new THREE.MeshStandardMaterial({ color: 0xf7d9bb, roughness: .85 })); flower.position.set(lily.position.x, .11, lily.position.z); scene.add(flower); }
+  }
+}
+
+// Faceted horizon layers give the small circuit a broad valley silhouette.
+const mountainCount = 34, mountainGeometry = new THREE.ConeGeometry(1, 1, 7), mountainMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true });
+const mountains = new THREE.InstancedMesh(mountainGeometry, mountainMaterial, mountainCount);
+const snowcaps = new THREE.InstancedMesh(mountainGeometry, new THREE.MeshStandardMaterial({ color: 0xe6efeb, roughness: 1, flatShading: true }), mountainCount);
+const mountainColors = [0x718f85, 0x7b9788, 0x66847f, 0x8a9e8c, 0x718681];
+let capIndex = 0;
+for (let i = 0; i < mountainCount; i++) {
+  const angle = i / mountainCount * TAU + (random() - .5) * .11, distance = 195 + random() * 53, radius = 16 + random() * 20, height = 35 + random() * 54;
+  const x = Math.sin(angle) * distance, z = Math.cos(angle) * distance;
+  dummy.position.set(x, height / 2 - .5, z); dummy.rotation.set(0, random() * TAU, 0); dummy.scale.set(radius, height, radius * (.78 + random() * .36)); dummy.updateMatrix(); mountains.setMatrixAt(i, dummy.matrix); mountains.setColorAt(i, new THREE.Color(mountainColors[i % mountainColors.length]));
+  if (height > 60) { const capHeight = height * .24; dummy.position.set(x, height - capHeight / 2 - .5, z); dummy.scale.set(radius * .245, capHeight, radius * .245); dummy.updateMatrix(); snowcaps.setMatrixAt(capIndex++, dummy.matrix); }
+}
+snowcaps.count = capIndex; scene.add(mountains, snowcaps);
+const hills = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), 26);
+for (let i = 0; i < 26; i++) {
+  const angle = i / 26 * TAU + .08, distance = 152 + random() * 28, width = 11 + random() * 15;
+  dummy.position.set(Math.sin(angle) * distance, 3 + random() * 3, Math.cos(angle) * distance); dummy.rotation.set(0, random() * TAU, 0); dummy.scale.set(width, 6 + random() * 5, width * (.7 + random() * .5)); dummy.updateMatrix(); hills.setMatrixAt(i, dummy.matrix); hills.setColorAt(i, new THREE.Color([0x76946a, 0x819c70, 0x6e8e68][i % 3]));
+}
+scene.add(hills);
+
+const meadowPatches = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 }), 62);
+for (let i = 0; i < 62; i++) {
+  dummy.position.set((random() - .5) * 270, .007 + (i % 3) * .001, (random() - .5) * 210); dummy.rotation.set(-Math.PI / 2, 0, random() * TAU); dummy.scale.set(5 + random() * 14, 3 + random() * 8, 1); dummy.updateMatrix(); meadowPatches.setMatrixAt(i, dummy.matrix); meadowPatches.setColorAt(i, new THREE.Color([0x76965f, 0x91aa70, 0x819f63, 0x9bae73][i % 4]));
+}
+meadowPatches.receiveShadow = true; scene.add(meadowPatches);
+
 const treeCount = 155;
 const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(.22, .32, 2.4, 6), new THREE.MeshStandardMaterial({ color: 0x705340, roughness: 1 }), treeCount);
 const crowns = new THREE.InstancedMesh(new THREE.ConeGeometry(1.6, 4.8, 7), new THREE.MeshStandardMaterial({ color: 0x426f56, roughness: 1 }), treeCount);
@@ -246,7 +271,7 @@ const crownTips = new THREE.InstancedMesh(new THREE.ConeGeometry(1.15, 3.4, 7), 
 let treeIndex = 0, attempts = 0;
 while (treeIndex < treeCount && attempts++ < 3000) {
   const x = (random() - .5) * 245, z = (random() - .5) * 190;
-  if (Math.hypot(x, z) > 180 || nearestTrack(x, z).distanceSq < 145) continue;
+  if (Math.hypot(x, z) > 180 || Math.hypot(x, z) < 15 || inWaterZone(x, z, 2) || nearestTrack(x, z).distanceSq < 145) continue;
   const scale = .72 + random() * .68, turn = random() * TAU;
   dummy.position.set(x, 1.2 * scale, z); dummy.rotation.set(0, turn, 0); dummy.scale.set(scale, scale, scale); dummy.updateMatrix(); trunks.setMatrixAt(treeIndex, dummy.matrix);
   dummy.position.y = 3.65 * scale; dummy.updateMatrix(); crowns.setMatrixAt(treeIndex, dummy.matrix);
@@ -258,12 +283,47 @@ trunks.castShadow = crowns.castShadow = crownTips.castShadow = true;
 trunks.receiveShadow = crowns.receiveShadow = crownTips.receiveShadow = true;
 scene.add(trunks, crowns, crownTips);
 
+const groveCount = 72;
+const groveTrunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(.2, .32, 2.4, 6), new THREE.MeshStandardMaterial({ color: 0x765946, roughness: 1 }), groveCount);
+const groveCrowns = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .96, flatShading: true }), groveCount);
+let groveIndex = 0, groveAttempts = 0;
+while (groveIndex < groveCount && groveAttempts++ < 3000) {
+  const x = (random() - .5) * 250, z = (random() - .5) * 200;
+  if (Math.hypot(x, z) < 15 || inWaterZone(x, z, 2.5) || nearestTrack(x, z).distanceSq < 125) continue;
+  const scale = .68 + random() * .58; dummy.position.set(x, 1.15 * scale, z); dummy.rotation.set(0, random() * TAU, 0); dummy.scale.set(scale, scale, scale); dummy.updateMatrix(); groveTrunks.setMatrixAt(groveIndex, dummy.matrix);
+  dummy.position.y = 3.55 * scale; dummy.scale.set(2.05 * scale, 1.55 * scale, 1.85 * scale); dummy.updateMatrix(); groveCrowns.setMatrixAt(groveIndex, dummy.matrix); groveCrowns.setColorAt(groveIndex, new THREE.Color([0x649064, 0x759d67, 0x86a871, 0x5e8661, 0xa6ad6d][groveIndex % 5])); groveIndex++;
+}
+groveTrunks.count = groveCrowns.count = groveIndex; groveTrunks.castShadow = groveCrowns.castShadow = true; groveTrunks.receiveShadow = groveCrowns.receiveShadow = true; scene.add(groveTrunks, groveCrowns);
+
+const herbGeometry = new THREE.BufferGeometry();
+const herbPositions = [];
+for (let i = 0; i < 4; i++) { const angle = i / 4 * Math.PI, c = Math.cos(angle), s = Math.sin(angle), width = .18; herbPositions.push(-c * width, 0, -s * width, c * width, 0, s * width, 0, .68 + i * .05, 0); }
+herbGeometry.setAttribute('position', new THREE.Float32BufferAttribute(herbPositions, 3)); herbGeometry.computeVertexNormals();
+const herbs = new THREE.InstancedMesh(herbGeometry, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, side: THREE.DoubleSide }), 780);
+const flowerHeads = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(.12, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .9 }), 195);
+let herbIndex = 0, flowerIndex = 0, herbAttempts = 0;
+while (herbIndex < 780 && herbAttempts++ < 5000) {
+  const x = (random() - .5) * 245, z = (random() - .5) * 190;
+  if (Math.hypot(x, z) < 11 || inWaterZone(x, z, .8) || nearestTrack(x, z).distanceSq < 62) continue;
+  const scale = .65 + random() * .8; dummy.position.set(x, .025, z); dummy.rotation.set(0, random() * TAU, 0); dummy.scale.set(scale, scale, scale); dummy.updateMatrix(); herbs.setMatrixAt(herbIndex, dummy.matrix); herbs.setColorAt(herbIndex, new THREE.Color([0x5e8b57, 0x769c5c, 0x91a96a, 0x65945e][herbIndex % 4]));
+  if (herbIndex % 4 === 0 && flowerIndex < 195) { dummy.position.y = .58 * scale; dummy.scale.setScalar(.75 + random() * .65); dummy.updateMatrix(); flowerHeads.setMatrixAt(flowerIndex, dummy.matrix); flowerHeads.setColorAt(flowerIndex, new THREE.Color([0xf0d38d, 0xf5d9c5, 0xd8a8bc, 0xbcc9ea, 0xe7b86b][flowerIndex % 5])); flowerIndex++; }
+  herbIndex++;
+}
+herbs.count = herbIndex; flowerHeads.count = flowerIndex; scene.add(herbs, flowerHeads);
+
+const reedCount = 84, reeds = new THREE.InstancedMesh(new THREE.CylinderGeometry(.025, .045, 1, 5), new THREE.MeshStandardMaterial({ color: 0x718854, roughness: 1 }), reedCount);
+for (let i = 0; i < reedCount; i++) {
+  const water = WATER_BODIES[i % WATER_BODIES.length], angle = i * 2.399, edge = .96 + random() * .12, height = .65 + random() * .9;
+  dummy.position.set(water.x + Math.cos(angle) * water.rx * edge, height / 2, water.z + Math.sin(angle) * water.rz * edge); dummy.rotation.set((random() - .5) * .16, 0, (random() - .5) * .16); dummy.scale.set(1, height, 1); dummy.updateMatrix(); reeds.setMatrixAt(i, dummy.matrix);
+}
+scene.add(reeds);
+
 const rockCount = 48;
 const rocks = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xa79d7c, roughness: 1 }), rockCount);
 let rockIndex = 0;
 while (rockIndex < rockCount) {
   const x = (random() - .5) * 260, z = (random() - .5) * 205;
-  if (nearestTrack(x, z).distanceSq < 155) continue;
+  if (Math.hypot(x, z) < 15 || inWaterZone(x, z, 2) || nearestTrack(x, z).distanceSq < 155) continue;
   dummy.position.set(x, .25 + random() * .35, z); dummy.rotation.set(random(), random() * TAU, random()); dummy.scale.set(.7 + random() * 1.8, .4 + random(), .7 + random() * 1.6); dummy.updateMatrix(); rocks.setMatrixAt(rockIndex++, dummy.matrix);
 }
 rocks.castShadow = true; rocks.receiveShadow = true; scene.add(rocks);
@@ -277,6 +337,131 @@ for (let i = 0; i < 12; i++) {
     puff.position.set((j - count / 2) * 3.3, random() * 1.5, random() * 2); puff.scale.set(3 + random() * 2, 1.5 + random(), 2 + random()); cloud.add(puff);
   }
   cloud.position.set((random() - .5) * 300, 42 + random() * 40, (random() - .5) * 290); scene.add(cloud);
+}
+
+// Shared low-poly animal parts keep a lively reserve inexpensive to render.
+const wildlifeBox = new THREE.BoxGeometry(1, 1, 1), wildlifeSphere = new THREE.SphereGeometry(1, 8, 6), wildlifeCylinder = new THREE.CylinderGeometry(1, 1, 1, 7), wildlifeCone = new THREE.ConeGeometry(1, 1, 6);
+const wildlifeMaterials = {
+  deer: new THREE.MeshStandardMaterial({ color: 0xb98458, roughness: .92 }), deerLight: new THREE.MeshStandardMaterial({ color: 0xe4c495, roughness: .92 }),
+  rabbit: new THREE.MeshStandardMaterial({ color: 0xe9dfd0, roughness: .94 }), rabbitPink: new THREE.MeshStandardMaterial({ color: 0xe8aaa4, roughness: .9 }),
+  dog: new THREE.MeshStandardMaterial({ color: 0xc99668, roughness: .92 }), dogLight: new THREE.MeshStandardMaterial({ color: 0xe7d2b1, roughness: .92 }), dogDark: new THREE.MeshStandardMaterial({ color: 0x705343, roughness: .92 }),
+  cat: new THREE.MeshStandardMaterial({ color: 0xd7ad75, roughness: .92 }), catStripe: new THREE.MeshStandardMaterial({ color: 0x9d704c, roughness: .92 }),
+  eye: new THREE.MeshStandardMaterial({ color: 0x172a30, roughness: .6 }), antler: new THREE.MeshStandardMaterial({ color: 0xd8c39f, roughness: 1 }),
+};
+function wildlifePart(parent, geometry, material, position, scale, rotation = [0, 0, 0]) {
+  const mesh = new THREE.Mesh(geometry, material); mesh.position.set(...position); mesh.scale.set(...scale); mesh.rotation.set(...rotation); mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+}
+function makeAnimal(type, x, z, phase) {
+  const root = new THREE.Group(), pose = new THREE.Group(); root.add(pose); root.position.set(x, .015, z); scene.add(root);
+  const legs = []; let tail = null, head = null, radius = .7, fleeSpeed = 4.5, wander = 3;
+  const leg = (material, px, py, pz, sx, sy, sz) => { const part = wildlifePart(pose, wildlifeBox, material, [px, py, pz], [sx, sy, sz]); legs.push(part); return part; };
+  if (type === 'deer') {
+    radius = 1.12; fleeSpeed = 7.2; wander = 5.5;
+    wildlifePart(pose, wildlifeSphere, wildlifeMaterials.deer, [0, 1.62, 0], [.72, .57, 1.23]);
+    wildlifePart(pose, wildlifeCylinder, wildlifeMaterials.deer, [0, 2.16, .78], [.32, .93, .32], [.35, 0, 0]);
+    head = wildlifePart(pose, wildlifeSphere, wildlifeMaterials.deer, [0, 2.56, 1.12], [.43, .43, .67]);
+    wildlifePart(pose, wildlifeSphere, wildlifeMaterials.deerLight, [0, 2.39, 1.63], [.3, .24, .33]);
+    for (const side of [-1, 1]) {
+      leg(wildlifeMaterials.deer, side * .45, .75, .68, .16, 1.44, .18); leg(wildlifeMaterials.deer, side * .45, .75, -.66, .16, 1.44, .18);
+      wildlifePart(pose, wildlifeCone, wildlifeMaterials.deerLight, [side * .32, 2.91, 1.1], [.18, .47, .14], [0, 0, side * -.35]);
+      wildlifePart(pose, wildlifeCylinder, wildlifeMaterials.antler, [side * .3, 3.1, .97], [.045, .88, .045], [0, 0, side * -.27]);
+      wildlifePart(pose, wildlifeCylinder, wildlifeMaterials.antler, [side * .47, 3.22, .96], [.038, .4, .038], [0, 0, side * .68]);
+      wildlifePart(pose, wildlifeSphere, wildlifeMaterials.eye, [side * .33, 2.61, 1.55], [.055, .055, .04]);
+    }
+    tail = wildlifePart(pose, wildlifeCone, wildlifeMaterials.deerLight, [0, 1.72, -1.13], [.18, .42, .18], [-1.25, 0, 0]);
+  } else if (type === 'rabbit') {
+    radius = .59; fleeSpeed = 5.1; wander = 2.7;
+    wildlifePart(pose, wildlifeSphere, wildlifeMaterials.rabbit, [0, .52, -.02], [.48, .42, .68]);
+    head = wildlifePart(pose, wildlifeSphere, wildlifeMaterials.rabbit, [0, .83, .49], [.37, .34, .39]);
+    for (const side of [-1, 1]) {
+      wildlifePart(pose, wildlifeBox, wildlifeMaterials.rabbit, [side * .18, 1.23, .44], [.16, .64, .15], [side * .05, 0, side * -.1]);
+      wildlifePart(pose, wildlifeBox, wildlifeMaterials.rabbitPink, [side * .18, 1.23, .524], [.075, .43, .015], [side * .05, 0, side * -.1]);
+      leg(wildlifeMaterials.rabbit, side * .27, .2, .28, .19, .23, .38); leg(wildlifeMaterials.rabbit, side * .28, .23, -.35, .22, .28, .45);
+      wildlifePart(pose, wildlifeSphere, wildlifeMaterials.eye, [side * .25, .88, .79], [.046, .046, .028]);
+    }
+    wildlifePart(pose, wildlifeSphere, wildlifeMaterials.rabbitPink, [0, .75, .84], [.06, .045, .035]); tail = wildlifePart(pose, wildlifeSphere, wildlifeMaterials.rabbit, [0, .57, -.65], [.2, .2, .2]);
+  } else if (type === 'dog') {
+    radius = .84; fleeSpeed = 5.6; wander = 4.1;
+    wildlifePart(pose, wildlifeSphere, wildlifeMaterials.dog, [0, .84, 0], [.53, .46, .85]);
+    head = wildlifePart(pose, wildlifeSphere, wildlifeMaterials.dog, [0, 1.25, .68], [.43, .4, .48]); wildlifePart(pose, wildlifeSphere, wildlifeMaterials.dogLight, [0, 1.1, 1.09], [.29, .23, .32]);
+    for (const side of [-1, 1]) {
+      leg(wildlifeMaterials.dog, side * .34, .39, .46, .17, .74, .18); leg(wildlifeMaterials.dog, side * .34, .39, -.48, .17, .74, .18);
+      wildlifePart(pose, wildlifeBox, wildlifeMaterials.dogDark, [side * .37, 1.42, .67], [.2, .54, .16], [0, 0, side * .34]); wildlifePart(pose, wildlifeSphere, wildlifeMaterials.eye, [side * .27, 1.31, 1.03], [.05, .05, .03]);
+    }
+    wildlifePart(pose, wildlifeSphere, wildlifeMaterials.eye, [0, 1.1, 1.37], [.08, .065, .05]); tail = wildlifePart(pose, wildlifeCylinder, wildlifeMaterials.dogDark, [0, 1.01, -.87], [.12, .8, .12], [-.86, 0, 0]);
+  } else {
+    radius = .68; fleeSpeed = 4.8; wander = 3.2;
+    wildlifePart(pose, wildlifeSphere, wildlifeMaterials.cat, [0, .62, 0], [.42, .35, .67]);
+    head = wildlifePart(pose, wildlifeSphere, wildlifeMaterials.cat, [0, .92, .55], [.34, .33, .36]);
+    for (const side of [-1, 1]) {
+      leg(wildlifeMaterials.cat, side * .27, .28, .35, .13, .5, .15); leg(wildlifeMaterials.cat, side * .27, .28, -.37, .13, .5, .15);
+      wildlifePart(pose, wildlifeCone, wildlifeMaterials.catStripe, [side * .23, 1.27, .51], [.2, .39, .15], [0, 0, side * -.24]); wildlifePart(pose, wildlifeSphere, wildlifeMaterials.eye, [side * .22, .96, .84], [.047, .047, .028]);
+    }
+    wildlifePart(pose, wildlifeSphere, wildlifeMaterials.rabbitPink, [0, .82, .87], [.05, .04, .03]); tail = wildlifePart(pose, wildlifeCylinder, wildlifeMaterials.catStripe, [.08, .73, -.69], [.085, .9, .085], [-1.1, 0, .25]);
+  }
+  return { type, root, pose, legs, tail, head, homeX: x, homeZ: z, phase, radius, fleeSpeed, wander, heading: phase, fleeTimer: 0, injury: 0, critical: false, criticalTimer: 0, hitCooldown: 0 };
+}
+const wildlife = [
+  ['deer', -23, 22], ['deer', 47, -5], ['deer', -17, -23],
+  ['rabbit', 17, 29], ['rabbit', -32, -3], ['rabbit', 84, 14], ['rabbit', 54, 29],
+  ['dog', -78, -10], ['dog', -87, 18],
+  ['cat', -94, 59], ['cat', 16, -20], ['cat', 91, -40],
+].map(([type, x, z], index) => makeAnimal(type, x, z, index * 1.31 + .5));
+let wildlifeToastTimer = 0, habitatUpdate = 0;
+function showWildlifeToast(animal, critical) {
+  ui.wildlifeToast.className = `wildlife-toast ${critical ? 'critical' : 'injured'}`;
+  ui.wildlifeSymbol.textContent = critical ? '!' : '✦'; ui.wildlifeTitle.textContent = `${animal.type.toUpperCase()} ${critical ? 'LOST' : 'INJURED'}`;
+  ui.wildlifeDetail.textContent = critical ? 'CRITICAL IMPACT · BRAKE FOR WILDLIFE' : 'RESTING IN THE MEADOW · SLOW DOWN';
+  wildlifeToastTimer = critical ? 4.5 : 3.5;
+}
+function resetWildlife() {
+  for (const animal of wildlife) { animal.root.visible = true; animal.root.position.set(animal.homeX, .015, animal.homeZ); animal.root.scale.setScalar(1); animal.pose.rotation.set(0, 0, 0); animal.fleeTimer = animal.injury = animal.criticalTimer = animal.hitCooldown = 0; animal.critical = false; }
+  wildlifeToastTimer = 0; ui.wildlifeToast.classList.add('hidden'); ui.wildlifeCount.textContent = `${wildlife.length}/${wildlife.length}`; ui.habitatStatus.textContent = 'WILDLIFE ACTIVE'; ui.habitatPanel.classList.remove('warning');
+}
+function updateWildlife(dt, now) {
+  const time = now * .001; let nearest = Infinity, nearestType = '', alive = 0;
+  for (const animal of wildlife) {
+    if (animal.critical) {
+      animal.criticalTimer += dt; animal.pose.rotation.z += (-1.42 - animal.pose.rotation.z) * (1 - Math.exp(-dt * 7));
+      if (animal.criticalTimer > 1.1) animal.root.scale.setScalar(Math.max(0, 1 - (animal.criticalTimer - 1.1) * .75));
+      if (animal.criticalTimer > 2.45) animal.root.visible = false;
+      continue;
+    }
+    alive++; animal.hitCooldown = Math.max(0, animal.hitCooldown - dt);
+    const dx = animal.root.position.x - state.x, dz = animal.root.position.z - state.z, distance = Math.hypot(dx, dz);
+    if (distance < nearest) { nearest = distance; nearestType = animal.type; }
+    if (distance < 10 && state.phase === 'racing' && animal.injury <= 0) animal.fleeTimer = Math.max(animal.fleeTimer, 2.2);
+    animal.fleeTimer = Math.max(0, animal.fleeTimer - dt);
+    if (distance < activeVehicle.radius + animal.radius && animal.hitCooldown <= 0 && state.phase === 'racing') {
+      const impact = Math.abs(state.forward) + Math.abs(state.lateral) * .35; animal.hitCooldown = 1.2;
+      if (impact > 22) { animal.critical = true; animal.criticalTimer = 0; showWildlifeToast(animal, true); state.timeLeft = Math.max(0, state.timeLeft - 8); }
+      else if (impact > 5) { animal.injury = 8; showWildlifeToast(animal, false); state.timeLeft = Math.max(0, state.timeLeft - 4); }
+      else animal.fleeTimer = 3;
+      if (impact > 5) { state.vx *= .72; state.vz *= .72; state.collision = Math.max(state.collision, .55); }
+    }
+    if (animal.critical) continue;
+    animal.injury = Math.max(0, animal.injury - dt);
+    const resting = animal.injury > 4.5;
+    const targetTilt = resting ? -.94 : 0; animal.pose.rotation.z += (targetTilt - animal.pose.rotation.z) * (1 - Math.exp(-dt * 5));
+    if (!resting) {
+      let targetX, targetZ, pace;
+      if (animal.fleeTimer > 0) { const inv = 1 / Math.max(distance, .1); targetX = animal.root.position.x + dx * inv * 10; targetZ = animal.root.position.z + dz * inv * 10; pace = animal.fleeSpeed; }
+      else { targetX = animal.homeX + Math.sin(time * .24 + animal.phase) * animal.wander; targetZ = animal.homeZ + Math.cos(time * .19 + animal.phase * 1.3) * animal.wander * .72; pace = animal.injury > 0 ? .55 : 1.2; }
+      const tx = targetX - animal.root.position.x, tz = targetZ - animal.root.position.z, remaining = Math.hypot(tx, tz);
+      if (remaining > .08) { const step = Math.min(remaining, pace * dt); animal.root.position.x += tx / remaining * step; animal.root.position.z += tz / remaining * step; const desired = Math.atan2(tx, tz), delta = Math.atan2(Math.sin(desired - animal.heading), Math.cos(desired - animal.heading)); animal.heading += delta * (1 - Math.exp(-dt * 7)); }
+      animal.root.rotation.y = animal.heading;
+      const gait = time * (animal.fleeTimer > 0 ? 15 : 6) + animal.phase; animal.legs.forEach((legPart, index) => { legPart.rotation.x = Math.sin(gait + (index % 2) * Math.PI) * (animal.fleeTimer > 0 ? .34 : .13); });
+      if (animal.tail) animal.tail.rotation.y = Math.sin(time * 4 + animal.phase) * .2;
+      animal.pose.position.y = animal.type === 'rabbit' ? Math.abs(Math.sin(gait)) * (animal.fleeTimer > 0 ? .24 : .055) : Math.sin(gait * .5) * .025;
+    }
+  }
+  if (wildlifeToastTimer > 0) { wildlifeToastTimer -= dt; if (wildlifeToastTimer <= 0) ui.wildlifeToast.classList.add('hidden'); }
+  habitatUpdate -= dt;
+  if (habitatUpdate <= 0) { habitatUpdate = .25; ui.wildlifeCount.textContent = `${alive}/${wildlife.length}`; ui.habitatStatus.textContent = nearest < 13 ? `${nearestType.toUpperCase()} NEARBY` : alive < wildlife.length ? 'DRIVE WITH CARE' : 'WILDLIFE ACTIVE'; ui.habitatPanel.classList.toggle('warning', nearest < 13 || alive < wildlife.length); }
+}
+function updateNature(now) {
+  const time = now * .001;
+  waterRipples.forEach(({ mesh, phase }) => { const cycle = (time * .34 + phase) % 1; mesh.scale.setScalar(.5 + cycle * 2.8); mesh.material.opacity = (1 - cycle) * .31; });
 }
 
 function canvasLabel(text, width = 512, height = 128, background = '#142b39', foreground = '#f8f5ed') {
@@ -326,6 +511,76 @@ function roundedBox(width, height, depth, radius, material) {
   geometry.translate(0, 0, -extrudeDepth / 2);
   return new THREE.Mesh(geometry, material);
 }
+
+// A quiet, cyan-lit maker monument sits in the circuit's open infield.
+const MONUMENT = { x: 0, z: 0, promptRadius: 12.5 };
+const monument = new THREE.Group();
+monument.position.set(MONUMENT.x, 0, MONUMENT.z);
+monument.rotation.y = Math.atan2(start.x - MONUMENT.x, start.z - MONUMENT.z);
+scene.add(monument);
+const monumentStone = new THREE.MeshStandardMaterial({ color: 0x162b35, metalness: .48, roughness: .62 });
+const monumentEdge = new THREE.MeshStandardMaterial({ color: 0x35515d, metalness: .64, roughness: .45 });
+const monumentDark = new THREE.MeshStandardMaterial({ color: 0x081820, metalness: .32, roughness: .76 });
+const monumentGlow = new THREE.MeshStandardMaterial({ color: 0x45e3da, emissive: 0x16c8c0, emissiveIntensity: 1.8, metalness: .28, roughness: .34 });
+const monumentGlass = new THREE.MeshBasicMaterial({ color: 0x48e8df, transparent: true, opacity: .18, depthWrite: false, side: THREE.DoubleSide });
+function monumentMesh(geometry, material, x, y, z, cast = true) {
+  const mesh = new THREE.Mesh(geometry, material); mesh.position.set(x, y, z); mesh.castShadow = cast; mesh.receiveShadow = true; monument.add(mesh); return mesh;
+}
+const plaza = monumentMesh(new THREE.CircleGeometry(10.3, 64), monumentDark, 0, .024, 0, false); plaza.rotation.x = -Math.PI / 2;
+for (const [radius, width, material] of [[9.55, .065, monumentGlow], [7.05, .035, monumentEdge], [3.75, .055, monumentGlow]]) {
+  const ring = monumentMesh(new THREE.TorusGeometry(radius, width, 7, 64), material, 0, .052, 0, false); ring.rotation.x = Math.PI / 2;
+}
+for (let i = 0; i < 16; i++) {
+  const angle = i / 16 * TAU, radius = i % 2 ? 8.28 : 8.45;
+  const marker = monumentMesh(new THREE.BoxGeometry(i % 2 ? .11 : .18, .025, i % 2 ? .78 : 1.2), i % 2 ? monumentEdge : monumentGlow, Math.sin(angle) * radius, .06, Math.cos(angle) * radius, false);
+  marker.rotation.y = angle;
+}
+monumentMesh(new THREE.CylinderGeometry(3.18, 3.52, 1.15, 10), monumentStone, 0, .61, 0);
+monumentMesh(new THREE.CylinderGeometry(2.65, 3.12, .52, 10), monumentEdge, 0, 1.43, 0);
+monumentMesh(new THREE.CylinderGeometry(2.48, 2.62, .23, 10), monumentDark, 0, 1.81, 0);
+const pedestalBand = monumentMesh(new THREE.TorusGeometry(3.23, .055, 7, 64), monumentGlow, 0, .94, 0, false); pedestalBand.rotation.x = Math.PI / 2;
+
+const robe = monumentMesh(new THREE.CylinderGeometry(.68, 1.36, 2.55, 8), monumentStone, 0, 3.19, 0);
+robe.rotation.y = Math.PI / 8;
+const shoulders = monumentMesh(new THREE.SphereGeometry(1.05, 10, 8), monumentEdge, 0, 4.22, -.02); shoulders.scale.set(1.23, .63, .7);
+const hackerHood = monumentMesh(new THREE.SphereGeometry(1.19, 12, 9), monumentStone, 0, 5.06, -.06); hackerHood.scale.set(1, 1.07, .83);
+const face = monumentMesh(new THREE.CircleGeometry(.72, 24), monumentDark, 0, 5.03, .945, false);
+const eye = monumentMesh(new THREE.BoxGeometry(1.0, .075, .04), monumentGlow, 0, 5.14, .972, false);
+const mask = monumentMesh(new THREE.BoxGeometry(.63, .25, .045), monumentDark, 0, 4.82, .966, false);
+function monumentLimb(a, b, radius, material) {
+  const direction = b.clone().sub(a), mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * .82, radius, direction.length(), 8), material);
+  mesh.position.copy(a).add(b).multiplyScalar(.5); mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize()); mesh.castShadow = true; mesh.receiveShadow = true; monument.add(mesh); return mesh;
+}
+for (const side of [-1, 1]) {
+  monumentLimb(new THREE.Vector3(side * .9, 4.12, .07), new THREE.Vector3(side * .46, 3.75, .93), .28, monumentStone);
+  monumentMesh(new THREE.SphereGeometry(.28, 9, 7), monumentEdge, side * .43, 3.74, .95);
+  monumentMesh(new THREE.BoxGeometry(.7, .22, 1.03), monumentDark, side * .55, 1.98, .45);
+}
+const laptopBase = roundedBox(1.92, 1.08, .13, .06, monumentEdge); laptopBase.rotation.x = -Math.PI / 2; laptopBase.position.set(0, 3.65, 1.04); laptopBase.castShadow = true; monument.add(laptopBase);
+const keyboard = monumentMesh(new THREE.PlaneGeometry(1.48, .66), monumentDark, 0, 3.725, 1.1, false); keyboard.rotation.x = -Math.PI / 2;
+const screenGroup = new THREE.Group(); screenGroup.position.set(0, 3.72, .62); screenGroup.rotation.x = -.13; monument.add(screenGroup);
+const screenBack = roundedBox(1.92, 1.02, .09, .055, monumentEdge); screenBack.position.y = .51; screenBack.castShadow = true; screenGroup.add(screenBack);
+const terminalCanvas = document.createElement('canvas'); terminalCanvas.width = 512; terminalCanvas.height = 256;
+const terminalCtx = terminalCanvas.getContext('2d');
+terminalCtx.fillStyle = '#081820'; terminalCtx.fillRect(0, 0, 512, 256);
+terminalCtx.fillStyle = '#47e7dd'; terminalCtx.font = 'bold 48px monospace'; terminalCtx.fillText('>_', 34, 68);
+terminalCtx.fillStyle = '#7cc7c5'; terminalCtx.font = '20px monospace';
+['const maker = "YOGESH";', 'build(world);', 'while (curious) learn();'].forEach((line, i) => terminalCtx.fillText(line, 34, 117 + i * 37));
+terminalCtx.fillStyle = '#ff704c'; terminalCtx.fillRect(34, 220, 128, 5); terminalCtx.fillStyle = '#23464d'; terminalCtx.fillRect(174, 220, 302, 5);
+const terminalTexture = new THREE.CanvasTexture(terminalCanvas); terminalTexture.colorSpace = THREE.SRGBColorSpace;
+const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.73, .83), new THREE.MeshBasicMaterial({ map: terminalTexture })); screen.position.set(0, .51, .058); screenGroup.add(screen);
+const plaque = new THREE.Mesh(new THREE.PlaneGeometry(3.45, .73), new THREE.MeshStandardMaterial({ map: canvasLabel('YOGESH GIRI', 512, 128, '#0a202a', '#55e8df'), emissive: 0x103b40, emissiveIntensity: .5, roughness: .65 })); plaque.position.set(0, .69, 3.32); monument.add(plaque);
+
+const codeHalo = monumentMesh(new THREE.TorusGeometry(1.75, .075, 8, 48), monumentGlow, 0, 5.09, -.36, false);
+const beacon = monumentMesh(new THREE.CylinderGeometry(.16, .66, 14.5, 16, 1, true), monumentGlass, 0, 8.9, 0, false);
+const beaconCore = monumentMesh(new THREE.CylinderGeometry(.045, .045, 16, 8), monumentGlow, 0, 9.4, 0, false);
+const orbit = new THREE.Group(); orbit.position.y = 6.92; monument.add(orbit);
+const orbitNodes = [];
+for (let i = 0; i < 8; i++) {
+  const angle = i / 8 * TAU, node = new THREE.Mesh(new THREE.OctahedronGeometry(i % 2 ? .18 : .27, 0), i % 2 ? monumentEdge : monumentGlow);
+  node.position.set(Math.sin(angle) * 2.25, Math.sin(angle * 2) * .25, Math.cos(angle) * 2.25); orbit.add(node); orbitNodes.push(node);
+}
+const monumentLight = new THREE.PointLight(0x43e5dc, 8, 27, 2); monumentLight.position.set(0, 5.1, 1); monument.add(monumentLight);
 
 const car = new THREE.Group();
 const visual = new THREE.Group(); car.add(visual); scene.add(car);
@@ -784,7 +1039,7 @@ function restartRace() {
   lastCount = null; ui.finish.classList.add('hidden'); ui.lap.textContent = '1'; ui.position.textContent = '1'; ui.timer.textContent = '00:00.000'; ui.best.textContent = '--:--.---'; ui.raceLabel.textContent = 'GRID READY'; ui.raceStatus.className = 'race-status';
   setCountdown('3', 'GET READY');
   for (const p of smoke) { p.life = 0; p.sprite.visible = false; }
-  resetBots(); resetPickups(); updateRaceOrder(true);
+  resetBots(); resetPickups(); resetWildlife(); updateRaceOrder(true);
   activeRig.group.rotation.set(0, 0, 0); activeRig.group.position.set(0, 0, 0);
   updateCarVisual(0); snapCamera();
 }
@@ -827,21 +1082,12 @@ function updatePhysics(dt) {
   state.vx = nfx * forward + nrx * lateral; state.vz = nfz * forward + nrz * lateral;
   state.x += state.vx * dt; state.z += state.vz * dt;
 
-  let track = nearestTrack(state.x, state.z);
-  const limit = TRACK_WIDTH / 2 - spec.radius;
-  if (Math.abs(track.lateral) > limit) {
-    const side = Math.sign(track.lateral), penetration = Math.abs(track.lateral) - limit;
-    state.x -= track.sample.rx * side * penetration; state.z -= track.sample.rz * side * penetration;
-    const outward = (state.vx * track.sample.rx + state.vz * track.sample.rz) * side;
-    if (outward > 0) {
-      const protectedImpact = state.shield > 0 || state.wings > 0, damping = state.shield > 0 ? .96 : state.wings > 0 ? .88 : .76;
-      state.vx -= track.sample.rx * side * outward * (protectedImpact ? 1.05 : 1.35); state.vz -= track.sample.rz * side * outward * (protectedImpact ? 1.05 : 1.35); state.vx *= damping; state.vz *= damping; state.yawRate *= protectedImpact ? .83 : .65; state.collision = Math.min(protectedImpact ? .35 : 1, outward / 12);
-    }
-    track = nearestTrack(state.x, state.z);
-  }
+  const track = nearestTrack(state.x, state.z);
+  const onCircuit = track.distanceSq < (TRACK_WIDTH / 2 + 3) ** 2;
   state.forward = state.vx * nfx + state.vz * nfz; state.lateral = state.vx * nrx + state.vz * nrz;
-  state.trackU = track.index / SAMPLE_COUNT;
-  if (active) {
+  // Free-roam never clamps or slows the vehicle. Only nearby asphalt advances competitive lap progress.
+  if (onCircuit) state.trackU = track.index / SAMPLE_COUNT;
+  if (active && onCircuit) {
     if (track.index > SAMPLE_COUNT * .43 && track.index < SAMPLE_COUNT * .68) state.checkpoint = true;
     if (state.checkpoint && state.lastIndex > SAMPLE_COUNT * .84 && track.index < SAMPLE_COUNT * .16 && state.forward > 3) {
       const lapTime = state.raceTime - state.lapStart; state.bestLap = Math.min(state.bestLap, lapTime); state.lapStart = state.raceTime; state.completed++; state.checkpoint = false;
@@ -916,6 +1162,24 @@ function updateCamera(dt) {
   camera.fov += (((portrait ? 63 : 58) + speedRatio * 7 + (state.nitro > 0 ? 4 : 0)) - camera.fov) * (1 - Math.exp(-dt * 3)); camera.updateProjectionMatrix();
 }
 let effectSignature = '';
+let monumentNear = false;
+function updateMonument(now) {
+  const time = now * .001;
+  codeHalo.rotation.z = time * .24; orbit.rotation.y = time * .48;
+  beacon.material.opacity = .13 + Math.sin(time * 2.1) * .035;
+  beaconCore.material.emissiveIntensity = 1.35 + Math.sin(time * 2.1) * .42;
+  orbitNodes.forEach((node, index) => { node.rotation.x = time * .7 + index; node.rotation.y = time * .9; node.position.y = Math.sin(time * 1.8 + index * .8) * .27; });
+  const dx = MONUMENT.x - state.x, dz = MONUMENT.z - state.z, distance = Math.hypot(dx, dz);
+  const bearing = Math.atan2(dx, dz) - state.yaw;
+  ui.signalArrow.style.transform = `rotate(${-bearing * 180 / Math.PI}deg)`;
+  ui.signalDistance.textContent = `${Math.round(distance)} m`;
+  const near = distance <= MONUMENT.promptRadius;
+  if (near !== monumentNear) {
+    monumentNear = near; ui.monumentPrompt.classList.toggle('hidden', !near); ui.monumentPrompt.setAttribute('aria-hidden', String(!near));
+    ui.signalGuide.classList.toggle('locked', near); ui.signalStatus.textContent = near ? 'TERMINAL UNLOCKED' : 'FOLLOW THE CYAN BEACON';
+    document.body.classList.toggle('near-monument', near);
+  }
+}
 function updateHud() {
   const kmh = Math.round(Math.abs(state.forward) * 3.6); ui.speed.textContent = String(kmh); ui.arc.style.strokeDasharray = `${Math.min(320, kmh / 235 * 320)} 427`;
   ui.gear.textContent = state.forward < -1 ? 'R' : kmh < 3 ? 'N' : String(Math.min(5, 1 + Math.floor(kmh / 36)));
@@ -948,9 +1212,12 @@ function frame(now) {
       state.raceTime += dt;
       if (state.goTime > 0) { state.goTime -= dt; if (state.goTime <= 0) ui.countdown.classList.add('hidden'); }
     }
-    updatePhysics(dt); updateBots(dt); resolveBotContacts(); updateRaceSystems(dt, now); updateCarVisual(dt); updateSmoke(dt); updateRaceOrder(false, dt);
+    updatePhysics(dt); updateBots(dt); resolveBotContacts(); updateWildlife(dt, now); updateRaceSystems(dt, now); updateCarVisual(dt); updateSmoke(dt); updateRaceOrder(false, dt);
   }
-  updateCamera(dt); updateHud(); renderer.render(scene, camera);
+  updateCamera(dt); updateHud(); updateMonument(now); updateNature(now);
+  sky.position.set(camera.position.x, 0, camera.position.z);
+  sun.position.set(camera.position.x - 150, 130, camera.position.z - 190);
+  renderer.render(scene, camera);
   revealGame();
 }
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setPixelRatio(Math.min(devicePixelRatio, pixelRatioCap())); renderer.setSize(innerWidth, innerHeight); });
