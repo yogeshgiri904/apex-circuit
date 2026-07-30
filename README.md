@@ -46,7 +46,13 @@ Six procedural pickup families appear around the racing line and respawn after c
 
 Fuel and the two-minute time bank are shown in the systems panel. Running out of fuel leaves a reduced limp mode; running out of time ends the attempt. Active effects and pickup confirmations are shown in the HUD.
 
-The asphalt is now an open racing line with no curbs, guardrails, shoulder collision, or off-road speed penalty. Drivers can leave the circuit and cross the meadow freely. Competitive checkpoint progress is counted only near the racing surface. A cyan beacon marks the procedural hacker monument in the center of the infield; drive beside it to unlock a deliberate link to [Yogesh Giri's GitHub profile](https://github.com/yogeshgiri904).
+The asphalt is now an open racing line with no curbs, guardrails, shoulder collision, or off-road speed penalty. Drivers can leave the circuit and cross the meadow freely. Competitive checkpoint progress is counted only near the racing surface. A sky beacon marks **Meridian**, an original procedural superhero monument in the center of the infield. Drive beside it to unlock its cinematic presentation or click the statue / maker link to open [Yogesh Giri's GitHub profile](https://github.com/yogeshgiri904).
+
+## Meridian cinematic monument
+
+Meridian is an original sky guardian, not an interpretation of an existing superhero. The shared procedural statue uses midnight titanium, champagne alloy, a prism core, a split ceremonial cape, a polygonal pedestal, illuminated inlays, orbiting shards, a beacon, and additive particles. The in-world landmark stays in the lightweight Three.js race scene.
+
+The optional cinematic hall is lazy-loaded with React, React Three Fiber, Drei, GSAP, and Tailwind CSS. It provides a foggy futuristic city, dramatic key/rim lighting and shadows, damped orbit controls, three scroll-driven story chapters, camera choreography, model hover/click behavior, a keyboard-accessible chapter rail and close control, a semantic GitHub link, responsive touch layouts, and reduced-motion handling. The underlying race renderer and timer pause while the hall is open.
 
 ## Meadow reserve
 

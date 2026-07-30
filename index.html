@@ -70,14 +70,15 @@
     <div id="pickup-toast" class="pickup-toast hidden" role="status" aria-live="polite"><span id="pickup-symbol" class="pickup-symbol">N</span><div><span id="pickup-title">NITRO</span><small id="pickup-detail">BOOST ENGAGED</small></div></div>
     <div id="wildlife-toast" class="wildlife-toast hidden" role="status" aria-live="polite"><span id="wildlife-symbol" class="wildlife-symbol">✦</span><div><span id="wildlife-title">WILDLIFE NEARBY</span><small id="wildlife-detail">BRAKE FOR CROSSINGS</small></div></div>
 
-    <aside id="signal-guide" class="signal-guide" aria-label="Hacker monument signal">
+    <aside id="signal-guide" class="signal-guide" aria-label="Meridian monument signal">
       <span class="signal-compass"><i id="signal-arrow">↑</i></span>
-      <div class="signal-copy"><span class="signal-kicker">HACKER MONUMENT</span><strong id="signal-distance">-- m</strong><small id="signal-status">FOLLOW THE CYAN BEACON</small></div>
+      <div class="signal-copy"><span class="signal-kicker">MERIDIAN MONUMENT</span><strong id="signal-distance">-- m</strong><small id="signal-status">FOLLOW THE SKY BEACON</small></div>
     </aside>
-    <section id="monument-prompt" class="monument-prompt hidden" aria-hidden="true" aria-label="Hacker monument link">
-      <div class="monument-prompt-top"><span class="signal-pulse"></span><span>SIGNAL LOCKED</span><span class="monument-coordinates">NODE / 00</span></div>
-      <div class="monument-prompt-body"><div class="monument-glyph" aria-hidden="true">&gt;_</div><div><span class="monument-eyebrow">THE MAKER'S TERMINAL</span><strong>Yogesh Giri</strong><small>Parked at the hacker monument</small></div></div>
-      <a id="github-link" class="github-link" href="https://github.com/yogeshgiri904" target="_blank" rel="noopener noreferrer"><span>Open GitHub profile</span><span aria-hidden="true">↗</span></a>
+    <section id="monument-prompt" class="monument-prompt hidden" aria-hidden="true" aria-label="Meridian monument experience">
+      <div class="monument-prompt-top"><span class="signal-pulse"></span><span>MONUMENT DISCOVERED</span><span class="monument-coordinates">SKY / 01</span></div>
+      <div class="monument-prompt-body"><div class="monument-glyph" aria-hidden="true">◇</div><div><span class="monument-eyebrow">THE ORIGINAL SKY GUARDIAN</span><strong>Meridian</strong><small>Orbit the statue and uncover its story</small></div></div>
+      <button id="hero-explore" class="hero-explore" type="button"><span>Enter cinematic monument</span><span aria-hidden="true">↗</span></button>
+      <a id="github-link" class="github-link github-link-secondary" href="https://github.com/yogeshgiri904" target="_blank" rel="noopener noreferrer"><span>Open maker's GitHub</span><span aria-hidden="true">↗</span></a>
     </section>
 
     <div class="speedometer" aria-label="Speed">
@@ -115,18 +116,29 @@
       </div>
     </div>
 
-    <div id="mobile-coach" class="mobile-coach"><span class="coach-dot"></span> Drag to steer <i>·</i> Hold GO <i>·</i> Tap AUTO for cruise</div>
+    <div id="mobile-coach" class="mobile-coach"><span class="coach-dot"></span> Turn the wheel <i>·</i> Press a pedal <i>·</i> Hold E-BRAKE to drift</div>
     <div class="touch-controls" aria-label="Touch driving controls">
       <button id="layout-toggle" class="layout-toggle" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="layout-toggle-icon">⇄</span><span id="layout-toggle-label">STEER LEFT</span></button>
-      <div id="steering-pad" class="steering-pad" role="slider" tabindex="0" aria-label="Analog steering" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0">
-        <div class="steering-track"><span class="steer-arrow left">‹</span><span class="steer-arrow right">›</span><span id="steering-knob" class="steering-knob"><i></i></span></div>
-        <span class="control-caption">STEER</span>
+      <div id="steering-pad" class="steering-pad" role="slider" tabindex="0" aria-label="Steering wheel" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Centered">
+        <div class="wheel-dial" aria-hidden="true">
+          <span class="wheel-index"></span>
+          <div id="steering-wheel" class="steering-wheel">
+            <span class="wheel-rim"><i class="wheel-grip grip-left"></i><i class="wheel-grip grip-right"></i><i class="wheel-center-mark"></i></span>
+            <span class="wheel-spoke spoke-left"></span><span class="wheel-spoke spoke-right"></span><span class="wheel-spoke spoke-bottom"></span>
+            <span class="wheel-hub"><b>A</b><i></i></span>
+          </div>
+        </div>
+        <span class="wheel-caption"><span>STEERING</span><b id="steering-angle">0°</b></span>
       </div>
       <div class="pedal-cluster">
-        <button id="cruise-toggle" class="cruise-toggle" type="button" aria-pressed="false"><span class="cruise-light"></span>AUTO</button>
-        <button class="touch-button handbrake" data-control="handbrake" aria-label="Handbrake"><span>DRIFT</span><small>HOLD</small></button>
-        <button class="touch-button brake" data-control="brake" aria-label="Brake"><span>BRAKE</span><small>REVERSE</small></button>
-        <button class="touch-button throttle" data-control="throttle" aria-label="Accelerate"><span>GO</span><small>HOLD</small></button>
+        <div class="pedal-auxiliary">
+          <button id="cruise-toggle" class="cruise-toggle" type="button" aria-pressed="false"><span class="cruise-light"></span>AUTO</button>
+          <button class="drift-lever" data-control="handbrake" type="button" aria-label="Hold handbrake to drift"><span class="lever-grip"></span><span>E-BRAKE</span></button>
+        </div>
+        <div class="pedal-pair">
+          <button class="drive-pedal brake-pedal" data-control="brake" type="button" aria-label="Brake and reverse"><span class="pedal-arm"></span><span class="pedal-face"><i class="pedal-ribs"></i><b>BRAKE</b><small>REVERSE</small></span></button>
+          <button class="drive-pedal throttle-pedal" data-control="throttle" type="button" aria-label="Accelerate"><span class="pedal-arm"></span><span class="pedal-face"><i class="pedal-ribs"></i><b>GO</b><small>THROTTLE</small></span></button>
+        </div>
       </div>
     </div>
 
@@ -140,6 +152,7 @@
         <div class="control-settings-note"><span class="coach-dot"></span> Saved on this device. The race is paused while setup is open.</div>
       </div>
     </div>
+    <div id="hero-root"></div>
 
     <script type="module" src="/src/main.js"></script>
   </body>

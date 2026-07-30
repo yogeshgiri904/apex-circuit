@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { animateHeroMonument, createHeroMonument, GITHUB_URL } from './hero-statue.js';
 import './style.css';
 
 const TAU = Math.PI * 2;
+const reducedMotionQuery = matchMedia('(prefers-reduced-motion: reduce)');
 const TRACK_WIDTH = 12.6;
 const SAMPLE_COUNT = 240;
 const TOTAL_LAPS = 3;
@@ -59,8 +61,11 @@ const ui = {
   signalDistance: document.querySelector('#signal-distance'),
   signalStatus: document.querySelector('#signal-status'),
   monumentPrompt: document.querySelector('#monument-prompt'),
+  heroExplore: document.querySelector('#hero-explore'),
+  heroRoot: document.querySelector('#hero-root'),
   steeringPad: document.querySelector('#steering-pad'),
-  steeringKnob: document.querySelector('#steering-knob'),
+  steeringWheel: document.querySelector('#steering-wheel'),
+  steeringAngle: document.querySelector('#steering-angle'),
   cruiseToggle: document.querySelector('#cruise-toggle'),
   mobileCoach: document.querySelector('#mobile-coach'),
   layoutToggle: document.querySelector('#layout-toggle'),
@@ -512,75 +517,13 @@ function roundedBox(width, height, depth, radius, material) {
   return new THREE.Mesh(geometry, material);
 }
 
-// A quiet, cyan-lit maker monument sits in the circuit's open infield.
-const MONUMENT = { x: 0, z: 0, promptRadius: 12.5 };
-const monument = new THREE.Group();
+// Meridian, an original sky guardian, anchors the circuit's open infield.
+const MONUMENT = { x: 0, z: 0, promptRadius: 14 };
+const heroRig = createHeroMonument();
+const monument = heroRig.group;
 monument.position.set(MONUMENT.x, 0, MONUMENT.z);
 monument.rotation.y = Math.atan2(start.x - MONUMENT.x, start.z - MONUMENT.z);
 scene.add(monument);
-const monumentStone = new THREE.MeshStandardMaterial({ color: 0x162b35, metalness: .48, roughness: .62 });
-const monumentEdge = new THREE.MeshStandardMaterial({ color: 0x35515d, metalness: .64, roughness: .45 });
-const monumentDark = new THREE.MeshStandardMaterial({ color: 0x081820, metalness: .32, roughness: .76 });
-const monumentGlow = new THREE.MeshStandardMaterial({ color: 0x45e3da, emissive: 0x16c8c0, emissiveIntensity: 1.8, metalness: .28, roughness: .34 });
-const monumentGlass = new THREE.MeshBasicMaterial({ color: 0x48e8df, transparent: true, opacity: .18, depthWrite: false, side: THREE.DoubleSide });
-function monumentMesh(geometry, material, x, y, z, cast = true) {
-  const mesh = new THREE.Mesh(geometry, material); mesh.position.set(x, y, z); mesh.castShadow = cast; mesh.receiveShadow = true; monument.add(mesh); return mesh;
-}
-const plaza = monumentMesh(new THREE.CircleGeometry(10.3, 64), monumentDark, 0, .024, 0, false); plaza.rotation.x = -Math.PI / 2;
-for (const [radius, width, material] of [[9.55, .065, monumentGlow], [7.05, .035, monumentEdge], [3.75, .055, monumentGlow]]) {
-  const ring = monumentMesh(new THREE.TorusGeometry(radius, width, 7, 64), material, 0, .052, 0, false); ring.rotation.x = Math.PI / 2;
-}
-for (let i = 0; i < 16; i++) {
-  const angle = i / 16 * TAU, radius = i % 2 ? 8.28 : 8.45;
-  const marker = monumentMesh(new THREE.BoxGeometry(i % 2 ? .11 : .18, .025, i % 2 ? .78 : 1.2), i % 2 ? monumentEdge : monumentGlow, Math.sin(angle) * radius, .06, Math.cos(angle) * radius, false);
-  marker.rotation.y = angle;
-}
-monumentMesh(new THREE.CylinderGeometry(3.18, 3.52, 1.15, 10), monumentStone, 0, .61, 0);
-monumentMesh(new THREE.CylinderGeometry(2.65, 3.12, .52, 10), monumentEdge, 0, 1.43, 0);
-monumentMesh(new THREE.CylinderGeometry(2.48, 2.62, .23, 10), monumentDark, 0, 1.81, 0);
-const pedestalBand = monumentMesh(new THREE.TorusGeometry(3.23, .055, 7, 64), monumentGlow, 0, .94, 0, false); pedestalBand.rotation.x = Math.PI / 2;
-
-const robe = monumentMesh(new THREE.CylinderGeometry(.68, 1.36, 2.55, 8), monumentStone, 0, 3.19, 0);
-robe.rotation.y = Math.PI / 8;
-const shoulders = monumentMesh(new THREE.SphereGeometry(1.05, 10, 8), monumentEdge, 0, 4.22, -.02); shoulders.scale.set(1.23, .63, .7);
-const hackerHood = monumentMesh(new THREE.SphereGeometry(1.19, 12, 9), monumentStone, 0, 5.06, -.06); hackerHood.scale.set(1, 1.07, .83);
-const face = monumentMesh(new THREE.CircleGeometry(.72, 24), monumentDark, 0, 5.03, .945, false);
-const eye = monumentMesh(new THREE.BoxGeometry(1.0, .075, .04), monumentGlow, 0, 5.14, .972, false);
-const mask = monumentMesh(new THREE.BoxGeometry(.63, .25, .045), monumentDark, 0, 4.82, .966, false);
-function monumentLimb(a, b, radius, material) {
-  const direction = b.clone().sub(a), mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius * .82, radius, direction.length(), 8), material);
-  mesh.position.copy(a).add(b).multiplyScalar(.5); mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize()); mesh.castShadow = true; mesh.receiveShadow = true; monument.add(mesh); return mesh;
-}
-for (const side of [-1, 1]) {
-  monumentLimb(new THREE.Vector3(side * .9, 4.12, .07), new THREE.Vector3(side * .46, 3.75, .93), .28, monumentStone);
-  monumentMesh(new THREE.SphereGeometry(.28, 9, 7), monumentEdge, side * .43, 3.74, .95);
-  monumentMesh(new THREE.BoxGeometry(.7, .22, 1.03), monumentDark, side * .55, 1.98, .45);
-}
-const laptopBase = roundedBox(1.92, 1.08, .13, .06, monumentEdge); laptopBase.rotation.x = -Math.PI / 2; laptopBase.position.set(0, 3.65, 1.04); laptopBase.castShadow = true; monument.add(laptopBase);
-const keyboard = monumentMesh(new THREE.PlaneGeometry(1.48, .66), monumentDark, 0, 3.725, 1.1, false); keyboard.rotation.x = -Math.PI / 2;
-const screenGroup = new THREE.Group(); screenGroup.position.set(0, 3.72, .62); screenGroup.rotation.x = -.13; monument.add(screenGroup);
-const screenBack = roundedBox(1.92, 1.02, .09, .055, monumentEdge); screenBack.position.y = .51; screenBack.castShadow = true; screenGroup.add(screenBack);
-const terminalCanvas = document.createElement('canvas'); terminalCanvas.width = 512; terminalCanvas.height = 256;
-const terminalCtx = terminalCanvas.getContext('2d');
-terminalCtx.fillStyle = '#081820'; terminalCtx.fillRect(0, 0, 512, 256);
-terminalCtx.fillStyle = '#47e7dd'; terminalCtx.font = 'bold 48px monospace'; terminalCtx.fillText('>_', 34, 68);
-terminalCtx.fillStyle = '#7cc7c5'; terminalCtx.font = '20px monospace';
-['const maker = "YOGESH";', 'build(world);', 'while (curious) learn();'].forEach((line, i) => terminalCtx.fillText(line, 34, 117 + i * 37));
-terminalCtx.fillStyle = '#ff704c'; terminalCtx.fillRect(34, 220, 128, 5); terminalCtx.fillStyle = '#23464d'; terminalCtx.fillRect(174, 220, 302, 5);
-const terminalTexture = new THREE.CanvasTexture(terminalCanvas); terminalTexture.colorSpace = THREE.SRGBColorSpace;
-const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.73, .83), new THREE.MeshBasicMaterial({ map: terminalTexture })); screen.position.set(0, .51, .058); screenGroup.add(screen);
-const plaque = new THREE.Mesh(new THREE.PlaneGeometry(3.45, .73), new THREE.MeshStandardMaterial({ map: canvasLabel('YOGESH GIRI', 512, 128, '#0a202a', '#55e8df'), emissive: 0x103b40, emissiveIntensity: .5, roughness: .65 })); plaque.position.set(0, .69, 3.32); monument.add(plaque);
-
-const codeHalo = monumentMesh(new THREE.TorusGeometry(1.75, .075, 8, 48), monumentGlow, 0, 5.09, -.36, false);
-const beacon = monumentMesh(new THREE.CylinderGeometry(.16, .66, 14.5, 16, 1, true), monumentGlass, 0, 8.9, 0, false);
-const beaconCore = monumentMesh(new THREE.CylinderGeometry(.045, .045, 16, 8), monumentGlow, 0, 9.4, 0, false);
-const orbit = new THREE.Group(); orbit.position.y = 6.92; monument.add(orbit);
-const orbitNodes = [];
-for (let i = 0; i < 8; i++) {
-  const angle = i / 8 * TAU, node = new THREE.Mesh(new THREE.OctahedronGeometry(i % 2 ? .18 : .27, 0), i % 2 ? monumentEdge : monumentGlow);
-  node.position.set(Math.sin(angle) * 2.25, Math.sin(angle * 2) * .25, Math.cos(angle) * 2.25); orbit.add(node); orbitNodes.push(node);
-}
-const monumentLight = new THREE.PointLight(0x43e5dc, 8, 27, 2); monumentLight.position.set(0, 5.1, 1); monument.add(monumentLight);
 
 const car = new THREE.Group();
 const visual = new THREE.Group(); car.add(visual); scene.add(car);
@@ -896,6 +839,7 @@ nitroFlames.visible = false; car.add(nitroFlames);
 
 let garageOpen = false;
 let controlSettingsOpen = false;
+let heroExperienceOpen = false;
 const categories = ['All', ...new Set(VEHICLES.map(vehicle => vehicle.category))];
 function renderGarage() {
   for (const category of categories) {
@@ -914,7 +858,7 @@ function renderGarage() {
 }
 function setGarage(open) {
   garageOpen = open; ui.garage.classList.toggle('hidden', !open); ui.garage.setAttribute('aria-hidden', String(!open)); ui.garageToggle.setAttribute('aria-expanded', String(open));
-  if (open) { Object.keys(controls).forEach(key => { controls[key] = false; }); resetSteeringPad(); ui.garageClose.focus(); } else ui.garageToggle.focus();
+  if (open) { clearDrivingControls(); resetSteeringPad(); ui.garageClose.focus(); } else ui.garageToggle.focus();
 }
 function selectVehicle(id) {
   const vehicle = VEHICLES.find(item => item.id === id); if (!vehicle) return;
@@ -945,25 +889,54 @@ function updateSmoke(dt) {
 }
 
 const controls = { throttle: false, brake: false, left: false, right: false, handbrake: false };
-const mobileInput = { steer: 0, pointerId: null, cruise: false };
+const MAX_WHEEL_ANGLE = Math.PI * .76;
+const mobileInput = { steer: 0, pointerId: null, cruise: false, wheelAngle: 0, lastPointerAngle: 0, lastClientX: 0, dragMode: 'rotate', keyboardUntil: 0 };
+const activeControlPointers = new Map();
 const keyMap = { KeyW: 'throttle', ArrowUp: 'throttle', KeyS: 'brake', ArrowDown: 'brake', KeyA: 'right', ArrowLeft: 'right', KeyD: 'left', ArrowRight: 'left', Space: 'handbrake' };
 addEventListener('keydown', event => {
+  if (heroExperienceOpen) return;
   if (controlSettingsOpen && event.code === 'Escape' && !event.repeat) { setControlSettings(false); event.preventDefault(); return; }
   if (controlSettingsOpen) return;
   if ((event.code === 'KeyG' || event.code === 'Escape') && !event.repeat) { if (event.code === 'KeyG' || garageOpen) setGarage(!garageOpen); event.preventDefault(); return; }
   if (garageOpen) return;
+  if (event.target instanceof HTMLElement && event.target.closest('button, [role="slider"], input, select, textarea, a')) return;
   if (event.code === 'KeyR' && !event.repeat) restartRace();
   const control = keyMap[event.code]; if (control) { controls[control] = true; event.preventDefault(); }
 });
 addEventListener('keyup', event => { const control = keyMap[event.code]; if (control) { controls[control] = false; event.preventDefault(); } });
 function hideMobileCoach() { ui.mobileCoach.classList.add('hidden'); }
-function setSteering(clientX) {
-  const rect = ui.steeringPad.getBoundingClientRect(), center = rect.left + rect.width / 2, range = rect.width * .35;
-  let value = THREE.MathUtils.clamp((clientX - center) / range, -1, 1); if (Math.abs(value) < .06) value = 0;
-  mobileInput.steer = value; ui.steeringPad.setAttribute('aria-valuenow', String(Math.round(value * 100))); ui.steeringKnob.style.transform = `translate(${value * range * .72}px, -50%)`;
+function wheelPointer(event) {
+  const rect = ui.steeringWheel.getBoundingClientRect();
+  const x = event.clientX - (rect.left + rect.width / 2), y = event.clientY - (rect.top + rect.height / 2);
+  return { angle: Math.atan2(y, x), radius: Math.hypot(x, y), diameter: rect.width };
+}
+function applyWheelAngle(angle) {
+  mobileInput.wheelAngle = THREE.MathUtils.clamp(angle, -MAX_WHEEL_ANGLE, MAX_WHEEL_ANGLE);
+  if (Math.abs(mobileInput.wheelAngle) < .008) mobileInput.wheelAngle = 0;
+  const value = mobileInput.wheelAngle / MAX_WHEEL_ANGLE, degrees = Math.round(THREE.MathUtils.radToDeg(mobileInput.wheelAngle));
+  mobileInput.steer = value;
+  ui.steeringWheel.style.transform = `rotate(${THREE.MathUtils.radToDeg(mobileInput.wheelAngle).toFixed(2)}deg)`;
+  ui.steeringAngle.textContent = degrees === 0 ? '0°' : `${Math.abs(degrees)}° ${degrees < 0 ? 'L' : 'R'}`;
+  ui.steeringPad.setAttribute('aria-valuenow', String(Math.round(value * 100)));
+  ui.steeringPad.setAttribute('aria-valuetext', value === 0 ? 'Centered' : `${Math.abs(Math.round(value * 100))}% ${value < 0 ? 'left' : 'right'}`);
 }
 function resetSteeringPad() {
-  mobileInput.steer = 0; mobileInput.pointerId = null; ui.steeringPad.classList.remove('active'); ui.steeringPad.setAttribute('aria-valuenow', '0'); ui.steeringKnob.style.transform = 'translate(0, -50%)';
+  const pointerId = mobileInput.pointerId;
+  mobileInput.pointerId = null; mobileInput.keyboardUntil = 0; ui.steeringPad.classList.remove('active');
+  if (pointerId !== null && ui.steeringPad.hasPointerCapture(pointerId)) ui.steeringPad.releasePointerCapture(pointerId);
+  applyWheelAngle(0);
+}
+function clearDrivingControls() {
+  Object.keys(controls).forEach(key => { controls[key] = false; });
+  for (const [button, pointerId] of activeControlPointers) {
+    activeControlPointers.delete(button); button.classList.remove('active');
+    if (button.hasPointerCapture(pointerId)) button.releasePointerCapture(pointerId);
+  }
+  document.querySelectorAll('[data-control].active').forEach(button => button.classList.remove('active'));
+}
+function updateSteeringWheel(dt, now) {
+  if (mobileInput.pointerId !== null || now < mobileInput.keyboardUntil || mobileInput.wheelAngle === 0) return;
+  applyWheelAngle(mobileInput.wheelAngle * Math.exp(-dt * 9));
 }
 function setControlLayout(layout, persist = true) {
   const safeLayout = layout === 'right' ? 'right' : 'left'; document.body.dataset.controlLayout = safeLayout; ui.layoutToggleLabel.textContent = safeLayout === 'right' ? 'STEER RIGHT' : 'STEER LEFT';
@@ -973,31 +946,85 @@ function setControlLayout(layout, persist = true) {
 }
 function setControlSettings(open) {
   controlSettingsOpen = open; ui.controlSettings.classList.toggle('hidden', !open); ui.controlSettings.setAttribute('aria-hidden', String(!open)); ui.layoutToggle.setAttribute('aria-expanded', String(open));
-  if (open) { Object.keys(controls).forEach(key => { controls[key] = false; }); resetSteeringPad(); ui.controlSettingsClose.focus(); } else ui.layoutToggle.focus();
+  if (open) { clearDrivingControls(); resetSteeringPad(); ui.controlSettingsClose.focus(); } else ui.layoutToggle.focus();
 }
 ui.steeringPad.addEventListener('pointerdown', event => {
-  if (mobileInput.pointerId !== null) return; event.preventDefault(); mobileInput.pointerId = event.pointerId; ui.steeringPad.classList.add('active'); ui.steeringPad.setPointerCapture(event.pointerId); setSteering(event.clientX); hideMobileCoach();
+  if (mobileInput.pointerId !== null || event.button > 0) return;
+  event.preventDefault();
+  const pointer = wheelPointer(event);
+  mobileInput.pointerId = event.pointerId; mobileInput.lastPointerAngle = pointer.angle; mobileInput.lastClientX = event.clientX;
+  mobileInput.dragMode = pointer.radius < pointer.diameter * .19 ? 'sweep' : 'rotate';
+  ui.steeringPad.classList.add('active'); ui.steeringPad.setPointerCapture(event.pointerId); hideMobileCoach();
 });
-ui.steeringPad.addEventListener('pointermove', event => { if (event.pointerId === mobileInput.pointerId) { event.preventDefault(); setSteering(event.clientX); } });
-const releaseSteering = event => { if (event.pointerId !== mobileInput.pointerId) return; if (ui.steeringPad.hasPointerCapture(event.pointerId)) ui.steeringPad.releasePointerCapture(event.pointerId); resetSteeringPad(); };
-ui.steeringPad.addEventListener('pointerup', releaseSteering); ui.steeringPad.addEventListener('pointercancel', releaseSteering); ui.steeringPad.addEventListener('lostpointercapture', resetSteeringPad);
+ui.steeringPad.addEventListener('pointermove', event => {
+  if (event.pointerId !== mobileInput.pointerId) return;
+  event.preventDefault();
+  const pointer = wheelPointer(event);
+  let delta;
+  if (mobileInput.dragMode === 'sweep') delta = (event.clientX - mobileInput.lastClientX) / Math.max(pointer.diameter, 1) * 2.8;
+  else delta = Math.atan2(Math.sin(pointer.angle - mobileInput.lastPointerAngle), Math.cos(pointer.angle - mobileInput.lastPointerAngle));
+  mobileInput.lastPointerAngle = pointer.angle; mobileInput.lastClientX = event.clientX;
+  applyWheelAngle(mobileInput.wheelAngle + delta);
+});
+const releaseSteering = event => {
+  if (event.pointerId !== mobileInput.pointerId) return;
+  mobileInput.pointerId = null; ui.steeringPad.classList.remove('active');
+  if (ui.steeringPad.hasPointerCapture(event.pointerId)) ui.steeringPad.releasePointerCapture(event.pointerId);
+};
+ui.steeringPad.addEventListener('pointerup', releaseSteering); ui.steeringPad.addEventListener('pointercancel', releaseSteering);
+ui.steeringPad.addEventListener('lostpointercapture', event => { if (event.pointerId === mobileInput.pointerId) { mobileInput.pointerId = null; ui.steeringPad.classList.remove('active'); } });
+ui.steeringPad.addEventListener('keydown', event => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.code)) return;
+  event.preventDefault(); event.stopPropagation();
+  applyWheelAngle(event.code === 'Home' ? 0 : mobileInput.wheelAngle + (event.code === 'ArrowLeft' ? -.18 : .18));
+  mobileInput.keyboardUntil = performance.now() + 560; hideMobileCoach();
+});
 ui.cruiseToggle.addEventListener('click', () => { mobileInput.cruise = !mobileInput.cruise; ui.cruiseToggle.classList.toggle('active', mobileInput.cruise); ui.cruiseToggle.setAttribute('aria-pressed', String(mobileInput.cruise)); hideMobileCoach(); });
 ui.layoutToggle.addEventListener('click', () => { setControlSettings(true); hideMobileCoach(); });
 ui.controlSettingsClose.addEventListener('click', () => setControlSettings(false));
 ui.controlSettings.addEventListener('click', event => { if (event.target === ui.controlSettings) setControlSettings(false); });
 document.querySelectorAll('[data-layout]').forEach(option => option.addEventListener('click', () => { setControlLayout(option.dataset.layout); setControlSettings(false); }));
 try { setControlLayout(localStorage.getItem('apex-control-layout'), false); } catch { setControlLayout('left', false); }
-addEventListener('blur', () => { Object.keys(controls).forEach(key => { controls[key] = false; }); resetSteeringPad(); });
+addEventListener('blur', () => { clearDrivingControls(); resetSteeringPad(); });
 document.querySelectorAll('[data-control]').forEach(button => {
   const control = button.dataset.control;
-  const release = event => { controls[control] = false; button.classList.remove('active'); if (button.hasPointerCapture(event.pointerId)) button.releasePointerCapture(event.pointerId); };
-  button.addEventListener('pointerdown', event => { event.preventDefault(); controls[control] = true; button.classList.add('active'); button.setPointerCapture(event.pointerId); hideMobileCoach(); });
-  button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', () => { controls[control] = false; button.classList.remove('active'); });
+  const release = event => {
+    if (activeControlPointers.get(button) !== event.pointerId) return;
+    activeControlPointers.delete(button); controls[control] = false; button.classList.remove('active');
+    if (button.hasPointerCapture(event.pointerId)) button.releasePointerCapture(event.pointerId);
+  };
+  button.addEventListener('pointerdown', event => {
+    if (activeControlPointers.has(button) || event.button > 0) return;
+    event.preventDefault(); activeControlPointers.set(button, event.pointerId); controls[control] = true; button.classList.add('active'); button.setPointerCapture(event.pointerId); hideMobileCoach();
+  });
+  button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release);
+  button.addEventListener('lostpointercapture', event => { if (activeControlPointers.get(button) === event.pointerId) { activeControlPointers.delete(button); controls[control] = false; button.classList.remove('active'); } });
+  button.addEventListener('keydown', event => {
+    if (event.code !== 'Space' && event.code !== 'Enter') return;
+    event.preventDefault(); event.stopPropagation(); controls[control] = true; button.classList.add('active'); hideMobileCoach();
+  });
+  button.addEventListener('keyup', event => {
+    if (event.code !== 'Space' && event.code !== 'Enter') return;
+    event.preventDefault(); event.stopPropagation(); controls[control] = false; button.classList.remove('active');
+  });
+  button.addEventListener('blur', () => { if (!activeControlPointers.has(button)) { controls[control] = false; button.classList.remove('active'); } });
 });
 ui.restart.addEventListener('click', restartRace);
 ui.garageToggle.addEventListener('click', () => setGarage(true));
 ui.garageClose.addEventListener('click', () => setGarage(false));
 ui.garage.addEventListener('click', event => { if (event.target === ui.garage) setGarage(false); });
+function setRaceInert(inert) { Array.from(document.body.children).forEach(element => { if (element !== ui.heroRoot && element.tagName !== 'SCRIPT') element.inert = inert; }); }
+ui.heroExplore.addEventListener('click', async () => {
+  if (heroExperienceOpen) return;
+  heroExperienceOpen = true; clearDrivingControls(); resetSteeringPad(); setRaceInert(true);
+  const originalLabel = ui.heroExplore.innerHTML; ui.heroExplore.disabled = true; ui.heroExplore.innerHTML = '<span>Preparing the sky hall…</span><span>◇</span>';
+  try {
+    const { mountHeroExperience } = await import('./hero-experience.jsx');
+    mountHeroExperience(ui.heroRoot, () => { heroExperienceOpen = false; setRaceInert(false); previous = performance.now(); ui.heroExplore.focus(); });
+  } catch (error) {
+    heroExperienceOpen = false; setRaceInert(false); console.error('Unable to open monument experience', error); ui.heroExplore.innerHTML = '<span>Try the monument again</span><span>↗</span>';
+  } finally { ui.heroExplore.disabled = false; if (heroExperienceOpen) ui.heroExplore.innerHTML = originalLabel; }
+});
 
 const state = { x: start.x, z: start.z, yaw: startYaw, vx: 0, vz: 0, yawRate: 0, steer: 0, wheel: 0, forward: 0, lateral: 0, phase: 'countdown', countdown: 3, goTime: 0, raceTime: 0, lapStart: 0, completed: 0, bestLap: Infinity, checkpoint: false, lastIndex: 0, trackU: 0, collision: 0, fuel: 100, timeLeft: 120, nitro: 0, wings: 0, shield: 0, gripBoost: 0, pickups: 0, position: 1, playerFinishTime: Infinity, finishReason: '' };
 const cameraLook = new THREE.Vector3(), desiredCamera = new THREE.Vector3(), desiredLook = new THREE.Vector3();
@@ -1056,7 +1083,7 @@ function updatePhysics(dt) {
   const spec = activeVehicle;
   const active = state.phase === 'racing';
   const brake = active && controls.brake, throttle = active && (controls.throttle || mobileInput.cruise) && !brake, handbrake = active && controls.handbrake;
-  // Camera-facing left is positive world yaw for this circuit; invert the screen-space pad value.
+  // Camera-facing left is positive world yaw for this circuit; invert the screen-space wheel value.
   const steerInput = active ? THREE.MathUtils.clamp(Number(controls.right) - Number(controls.left) - mobileInput.steer, -1, 1) : 0;
   state.steer += (steerInput - state.steer) * (1 - Math.exp(-dt * 9));
   const fx = Math.sin(state.yaw), fz = Math.cos(state.yaw), rx = Math.cos(state.yaw), rz = -Math.sin(state.yaw);
@@ -1163,12 +1190,19 @@ function updateCamera(dt) {
 }
 let effectSignature = '';
 let monumentNear = false;
+let monumentHovered = false;
+const monumentRaycaster = new THREE.Raycaster(), monumentPointer = new THREE.Vector2();
+function monumentUnderPointer(event) {
+  if (!monumentNear || heroExperienceOpen) return false;
+  const rect = renderer.domElement.getBoundingClientRect(); monumentPointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+  monumentRaycaster.setFromCamera(monumentPointer, camera); return monumentRaycaster.intersectObject(monument, true).length > 0;
+}
+renderer.domElement.addEventListener('pointermove', event => { monumentHovered = monumentUnderPointer(event); renderer.domElement.style.cursor = monumentHovered ? 'pointer' : ''; });
+renderer.domElement.addEventListener('pointerleave', () => { monumentHovered = false; renderer.domElement.style.cursor = ''; });
+renderer.domElement.addEventListener('click', event => { if (monumentUnderPointer(event)) window.open(GITHUB_URL, '_blank', 'noopener,noreferrer'); });
 function updateMonument(now) {
   const time = now * .001;
-  codeHalo.rotation.z = time * .24; orbit.rotation.y = time * .48;
-  beacon.material.opacity = .13 + Math.sin(time * 2.1) * .035;
-  beaconCore.material.emissiveIntensity = 1.35 + Math.sin(time * 2.1) * .42;
-  orbitNodes.forEach((node, index) => { node.rotation.x = time * .7 + index; node.rotation.y = time * .9; node.position.y = Math.sin(time * 1.8 + index * .8) * .27; });
+  animateHeroMonument(heroRig, time, reducedMotionQuery.matches, monumentHovered);
   const dx = MONUMENT.x - state.x, dz = MONUMENT.z - state.z, distance = Math.hypot(dx, dz);
   const bearing = Math.atan2(dx, dz) - state.yaw;
   ui.signalArrow.style.transform = `rotate(${-bearing * 180 / Math.PI}deg)`;
@@ -1176,7 +1210,7 @@ function updateMonument(now) {
   const near = distance <= MONUMENT.promptRadius;
   if (near !== monumentNear) {
     monumentNear = near; ui.monumentPrompt.classList.toggle('hidden', !near); ui.monumentPrompt.setAttribute('aria-hidden', String(!near));
-    ui.signalGuide.classList.toggle('locked', near); ui.signalStatus.textContent = near ? 'TERMINAL UNLOCKED' : 'FOLLOW THE CYAN BEACON';
+    ui.signalGuide.classList.toggle('locked', near); ui.signalStatus.textContent = near ? 'CINEMATIC UNLOCKED' : 'FOLLOW THE SKY BEACON';
     document.body.classList.toggle('near-monument', near);
   }
 }
@@ -1203,7 +1237,9 @@ function revealGame() {
 function frame(now) {
   requestAnimationFrame(frame);
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
-  if (bootReady && !garageOpen && !controlSettingsOpen) {
+  if (heroExperienceOpen) return;
+  updateSteeringWheel(dt, now);
+  if (bootReady && !garageOpen && !controlSettingsOpen && !heroExperienceOpen) {
     if (state.phase === 'countdown') {
       state.countdown -= dt;
       if (state.countdown > 0) setCountdown(String(Math.ceil(state.countdown)), 'GET READY');
