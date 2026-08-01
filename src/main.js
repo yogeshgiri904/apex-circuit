@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { animateHeroMonument, createHeroMonument, GITHUB_URL } from './hero-statue.js';
+import { animatePanditjiMonument, createPanditjiMonument, GITHUB_URL } from './panditji-monument.js';
 import './style.css';
 
 const TAU = Math.PI * 2;
@@ -12,6 +12,14 @@ const bootLoader = document.querySelector('#boot-loader');
 const bootStarted = performance.now();
 let bootReady = false;
 let bootScheduled = false;
+const PLAYER_STORAGE_KEY = 'panditji-race-player-name';
+const RACE_PLAYERS = ['Akash', 'Gaurav', 'Ankit', 'Vishal', 'Bhuvi'];
+function cleanPlayerName(value) { return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 18); }
+function cachedPlayerName() {
+  try { return cleanPlayerName(localStorage.getItem(PLAYER_STORAGE_KEY)); } catch { return ''; }
+}
+let playerName = cachedPlayerName() || 'Driver';
+let nameSetupOpen = !cachedPlayerName();
 
 const ui = {
   lap: document.querySelector('#lap'),
@@ -72,6 +80,13 @@ const ui = {
   layoutToggleLabel: document.querySelector('#layout-toggle-label'),
   controlSettings: document.querySelector('#control-settings'),
   controlSettingsClose: document.querySelector('#control-settings-close'),
+  fieldSize: document.querySelector('#field-size'),
+  finishField: document.querySelector('#finish-field'),
+  racerCount: document.querySelector('#racer-count'),
+  playerSetup: document.querySelector('#player-setup'),
+  playerSetupCard: document.querySelector('#player-setup-card'),
+  playerName: document.querySelector('#player-name'),
+  playerSetupNote: document.querySelector('#player-setup-note'),
 };
 
 const scene = new THREE.Scene();
@@ -491,7 +506,7 @@ for (const side of [-1, 1]) {
   const post = new THREE.Mesh(new THREE.BoxGeometry(.55, 9.4, .6), gateMat); post.position.set(side * (TRACK_WIDTH / 2 + 1.95), 4.7, 0); post.castShadow = true; startGroup.add(post);
   const foot = new THREE.Mesh(new THREE.BoxGeometry(1.4, .5, 1.6), new THREE.MeshStandardMaterial({ color: 0xe8573a, roughness: .8 })); foot.position.set(side * (TRACK_WIDTH / 2 + 1.95), .25, 0); foot.castShadow = true; startGroup.add(foot);
 }
-const beam = new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH + 4.45, 1.45, .65), new THREE.MeshStandardMaterial({ map: canvasLabel('APEX CIRCUIT'), roughness: .7 }));
+const beam = new THREE.Mesh(new THREE.BoxGeometry(TRACK_WIDTH + 4.45, 1.45, .65), new THREE.MeshStandardMaterial({ map: canvasLabel('PANDITJI KI RACE', 768, 128), roughness: .7 }));
 beam.position.set(0, 9.2, 0); beam.castShadow = true; startGroup.add(beam); scene.add(startGroup);
 
 // A small grandstand and flags make the start/finish area feel intentional.
@@ -517,10 +532,10 @@ function roundedBox(width, height, depth, radius, material) {
   return new THREE.Mesh(geometry, material);
 }
 
-// Meridian, an original sky guardian, anchors the circuit's open infield.
+// The PANDITJI dimensional wordmark anchors the circuit's open infield.
 const MONUMENT = { x: 0, z: 0, promptRadius: 14 };
-const heroRig = createHeroMonument();
-const monument = heroRig.group;
+const landmarkRig = createPanditjiMonument();
+const monument = landmarkRig.group;
 monument.position.set(MONUMENT.x, 0, MONUMENT.z);
 monument.rotation.y = Math.atan2(start.x - MONUMENT.x, start.z - MONUMENT.z);
 scene.add(monument);
@@ -572,7 +587,7 @@ const rigs = {
   apex: { group: visual, wheelPivots, wheelSpins, brakeMaterials: [brakeMat], wheelRadius: .43, animations: {} },
 };
 const VEHICLES = [
-  { id: 'apex', name: 'Apex GT', shortName: 'Apex GT', category: 'Sport', description: 'Balanced circuit coupe', color: '#f05b3d', maxSpeed: 46, accel: 25, brake: 39, grip: 8.7, turn: 1.62, reverse: 12, radius: 1.04, camera: 8.6, drift: 2.05 },
+  { id: 'apex', name: 'Panditji GT', shortName: 'Panditji GT', category: 'Sport', description: 'Balanced circuit coupe', color: '#f05b3d', maxSpeed: 46, accel: 25, brake: 39, grip: 8.7, turn: 1.62, reverse: 12, radius: 1.04, camera: 8.6, drift: 2.05 },
   { id: 'lamborghini', name: 'Lamborghini-inspired V12', shortName: 'V12 Supercar', category: 'Supercar', description: 'Low, sharp and very quick', color: '#b7de37', maxSpeed: 54, accel: 31, brake: 43, grip: 9.5, turn: 1.76, reverse: 12, radius: 1.08, camera: 9.1, drift: 2.25 },
   { id: 'scorpio', name: 'Mahindra Scorpio-N inspired', shortName: 'Scorpio-N style', category: 'SUV', description: 'Tall, planted road SUV', color: '#426987', maxSpeed: 40, accel: 21, brake: 36, grip: 7.7, turn: 1.42, reverse: 11, radius: 1.18, camera: 9.9, drift: 1.75 },
   { id: 'thar', name: 'Mahindra Thar inspired', shortName: 'Thar style', category: 'Off-road', description: 'Short wheelbase trail icon', color: '#d49845', maxSpeed: 37, accel: 22, brake: 35, grip: 7.1, turn: 1.72, reverse: 11, radius: 1.16, camera: 9.5, drift: 1.55 },
@@ -724,9 +739,11 @@ function tube(group, a, b, radius, material) {
 
 // Compact AI field: shared geometry and a sampled path avoid per-frame curve allocations.
 const BOT_PROFILES = [
-  { id: 'maya', name: 'MAYA', color: 0x42b6b0, lane: -2.05, pace: .79, phase: .2 },
-  { id: 'nova', name: 'NOVA', color: 0xe8b84f, lane: 1.95, pace: .75, phase: 2.3 },
-  { id: 'kai', name: 'KAI', color: 0x9b82c5, lane: -.25, pace: .72, phase: 4.4 },
+  { id: 'akash', name: 'AKASH', color: 0x42b6b0, lane: -2.05, pace: .79, phase: .2 },
+  { id: 'gaurav', name: 'GAURAV', color: 0xe8b84f, lane: 1.95, pace: .75, phase: 2.3 },
+  { id: 'ankit', name: 'ANKIT', color: 0x9b82c5, lane: -.25, pace: .72, phase: 4.4 },
+  { id: 'vishal', name: 'VISHAL', color: 0xf2735f, lane: 2.62, pace: .77, phase: 5.3 },
+  { id: 'bhuvi', name: 'BHUVI', color: 0x75a7e8, lane: -2.72, pace: .74, phase: 1.1 },
 ];
 function nameTexture(name, color) {
   const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 72; const ctx = canvas.getContext('2d');
@@ -745,17 +762,30 @@ function createBot(profile) {
   return { ...profile, group, wheelSpins: rig.wheelSpins, progress: 0, speed: 0, wheel: 0, finishTime: Infinity, laneNow: profile.lane };
 }
 const bots = BOT_PROFILES.map(createBot);
+function rosterNameId(name) { return cleanPlayerName(name).toLocaleLowerCase(); }
+function activeBots() { return bots.filter(bot => bot.active); }
+function configureRacerRoster(name = playerName) {
+  const selectedRosterId = rosterNameId(name);
+  const isRosterDriver = BOT_PROFILES.some(profile => profile.id === selectedRosterId);
+  for (const bot of bots) {
+    bot.active = !isRosterDriver || bot.id !== selectedRosterId;
+    bot.group.visible = bot.active;
+  }
+}
+configureRacerRoster();
 function placeBot(bot) {
   const s = trackAt(bot.progress), lane = bot.laneNow;
   bot.group.position.set(s.x + s.rx * lane, .015, s.z + s.rz * lane); bot.group.rotation.y = Math.atan2(s.tx, s.tz);
   for (const wheel of bot.wheelSpins) wheel.rotation.x = bot.wheel;
 }
 function resetBots() {
-  bots.forEach((bot, index) => { bot.progress = .012 * (bots.length - index); bot.speed = 0; bot.wheel = 0; bot.finishTime = Infinity; bot.laneNow = bot.lane; placeBot(bot); });
+  const active = activeBots();
+  bots.forEach(bot => { if (!bot.active) { bot.speed = 0; bot.progress = 0; bot.finishTime = Infinity; } });
+  active.forEach((bot, index) => { bot.progress = .012 * (active.length - index); bot.speed = 0; bot.wheel = 0; bot.finishTime = Infinity; bot.laneNow = bot.lane; placeBot(bot); });
 }
 function updateBots(dt) {
   if (state.phase !== 'racing') return;
-  for (const bot of bots) {
+  for (const bot of activeBots()) {
     if (!Number.isFinite(bot.finishTime)) {
       const s = trackAt(bot.progress), ahead = samples[(s.index + 7) % SAMPLE_COUNT], bend = 1 - (s.tx * ahead.tx + s.tz * ahead.tz);
       const target = activeVehicle.maxSpeed * bot.pace * (1 - Math.min(.27, bend * 3.5));
@@ -894,6 +924,7 @@ const mobileInput = { steer: 0, pointerId: null, cruise: false, wheelAngle: 0, l
 const activeControlPointers = new Map();
 const keyMap = { KeyW: 'throttle', ArrowUp: 'throttle', KeyS: 'brake', ArrowDown: 'brake', KeyA: 'right', ArrowLeft: 'right', KeyD: 'left', ArrowRight: 'left', Space: 'handbrake' };
 addEventListener('keydown', event => {
+  if (nameSetupOpen) return;
   if (heroExperienceOpen) return;
   if (controlSettingsOpen && event.code === 'Escape' && !event.repeat) { setControlSettings(false); event.preventDefault(); return; }
   if (controlSettingsOpen) return;
@@ -942,7 +973,7 @@ function setControlLayout(layout, persist = true) {
   const safeLayout = layout === 'right' ? 'right' : 'left'; document.body.dataset.controlLayout = safeLayout; ui.layoutToggleLabel.textContent = safeLayout === 'right' ? 'STEER RIGHT' : 'STEER LEFT';
   document.querySelectorAll('[data-layout]').forEach(option => { const selected = option.dataset.layout === safeLayout; option.classList.toggle('selected', selected); option.setAttribute('aria-pressed', String(selected)); });
   resetSteeringPad();
-  if (persist) { try { localStorage.setItem('apex-control-layout', safeLayout); } catch { /* Device storage can be unavailable in private contexts. */ } }
+  if (persist) { try { localStorage.setItem('panditji-race-control-layout', safeLayout); } catch { /* Device storage can be unavailable in private contexts. */ } }
 }
 function setControlSettings(open) {
   controlSettingsOpen = open; ui.controlSettings.classList.toggle('hidden', !open); ui.controlSettings.setAttribute('aria-hidden', String(!open)); ui.layoutToggle.setAttribute('aria-expanded', String(open));
@@ -984,7 +1015,7 @@ ui.layoutToggle.addEventListener('click', () => { setControlSettings(true); hide
 ui.controlSettingsClose.addEventListener('click', () => setControlSettings(false));
 ui.controlSettings.addEventListener('click', event => { if (event.target === ui.controlSettings) setControlSettings(false); });
 document.querySelectorAll('[data-layout]').forEach(option => option.addEventListener('click', () => { setControlLayout(option.dataset.layout); setControlSettings(false); }));
-try { setControlLayout(localStorage.getItem('apex-control-layout'), false); } catch { setControlLayout('left', false); }
+try { setControlLayout(localStorage.getItem('panditji-race-control-layout') || localStorage.getItem('apex-control-layout'), false); } catch { setControlLayout('left', false); }
 addEventListener('blur', () => { clearDrivingControls(); resetSteeringPad(); });
 document.querySelectorAll('[data-control]').forEach(button => {
   const control = button.dataset.control;
@@ -1013,11 +1044,33 @@ ui.restart.addEventListener('click', restartRace);
 ui.garageToggle.addEventListener('click', () => setGarage(true));
 ui.garageClose.addEventListener('click', () => setGarage(false));
 ui.garage.addEventListener('click', event => { if (event.target === ui.garage) setGarage(false); });
+function setPlayerSetup(open) {
+  nameSetupOpen = open;
+  ui.playerSetup.classList.toggle('hidden', !open);
+  ui.playerSetup.setAttribute('aria-hidden', String(!open));
+  document.body.classList.toggle('player-setup-active', open);
+  if (open) {
+    clearDrivingControls(); resetSteeringPad();
+    ui.playerName.value = playerName === 'Driver' ? '' : playerName;
+    window.setTimeout(() => ui.playerName.focus(), 0);
+  }
+}
+ui.playerSetupCard.addEventListener('submit', event => {
+  event.preventDefault();
+  const enteredName = cleanPlayerName(ui.playerName.value);
+  if (!enteredName) { ui.playerName.focus(); return; }
+  playerName = enteredName;
+  try { localStorage.setItem(PLAYER_STORAGE_KEY, playerName); } catch { /* The race still works when device storage is unavailable. */ }
+  configureRacerRoster(playerName);
+  refreshRacerUi();
+  setPlayerSetup(false);
+  restartRace();
+});
 function setRaceInert(inert) { Array.from(document.body.children).forEach(element => { if (element !== ui.heroRoot && element.tagName !== 'SCRIPT') element.inert = inert; }); }
 ui.heroExplore.addEventListener('click', async () => {
   if (heroExperienceOpen) return;
   heroExperienceOpen = true; clearDrivingControls(); resetSteeringPad(); setRaceInert(true);
-  const originalLabel = ui.heroExplore.innerHTML; ui.heroExplore.disabled = true; ui.heroExplore.innerHTML = '<span>Preparing the sky hall…</span><span>◇</span>';
+  const originalLabel = ui.heroExplore.innerHTML; ui.heroExplore.disabled = true; ui.heroExplore.innerHTML = '<span>Preparing the signature gallery…</span><span>◇</span>';
   try {
     const { mountHeroExperience } = await import('./hero-experience.jsx');
     mountHeroExperience(ui.heroRoot, () => { heroExperienceOpen = false; setRaceInert(false); previous = performance.now(); ui.heroExplore.focus(); });
@@ -1029,7 +1082,7 @@ ui.heroExplore.addEventListener('click', async () => {
 const state = { x: start.x, z: start.z, yaw: startYaw, vx: 0, vz: 0, yawRate: 0, steer: 0, wheel: 0, forward: 0, lateral: 0, phase: 'countdown', countdown: 3, goTime: 0, raceTime: 0, lapStart: 0, completed: 0, bestLap: Infinity, checkpoint: false, lastIndex: 0, trackU: 0, collision: 0, fuel: 100, timeLeft: 120, nitro: 0, wings: 0, shield: 0, gripBoost: 0, pickups: 0, position: 1, playerFinishTime: Infinity, finishReason: '' };
 const cameraLook = new THREE.Vector3(), desiredCamera = new THREE.Vector3(), desiredLook = new THREE.Vector3();
 let lastCount = null;
-const standingRows = Array.from({ length: 4 }, () => {
+const standingRows = Array.from({ length: 6 }, () => {
   const row = document.createElement('div'); row.className = 'standing-row'; row.innerHTML = '<span class="standing-place"></span><span class="standing-name"></span><span class="standing-gap"></span>'; ui.standings.appendChild(row); return row;
 });
 let orderUpdate = 0;
@@ -1040,9 +1093,18 @@ function formatTime(seconds) {
   return `${String(minutes).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${String(ms % 1000).padStart(3, '0')}`;
 }
 function formatBank(seconds) { const whole = Math.max(0, Math.ceil(seconds)); return `${String(Math.floor(whole / 60)).padStart(2, '0')}:${String(whole % 60).padStart(2, '0')}`; }
+function refreshRacerUi() {
+  const racerTotal = activeBots().length + 1;
+  ui.fieldSize.textContent = `/ ${racerTotal}`;
+  ui.finishField.textContent = `/ ${racerTotal}`;
+  ui.racerCount.innerHTML = `<i></i> ${racerTotal} RACERS`;
+  ui.playerSetupNote.textContent = RACE_PLAYERS.some(name => rosterNameId(name) === rosterNameId(playerName))
+    ? 'You are on the grid; the other four racers are bots.'
+    : 'Your name is not on the roster, so all five listed racers will compete as bots.';
+}
 function raceEntries() {
-  const player = { id: 'player', name: 'YOU', progress: state.completed + state.trackU, finishTime: state.playerFinishTime, color: '#ff633c' };
-  return [player, ...bots.map(bot => ({ id: bot.id, name: bot.name, progress: bot.progress, finishTime: bot.finishTime }))].sort((a, b) => {
+  const player = { id: 'player', name: playerName.toUpperCase(), progress: state.completed + state.trackU, finishTime: state.playerFinishTime, color: '#ff633c' };
+  return [player, ...activeBots().map(bot => ({ id: bot.id, name: bot.name, progress: bot.progress, finishTime: bot.finishTime }))].sort((a, b) => {
     const aDone = Number.isFinite(a.finishTime), bDone = Number.isFinite(b.finishTime);
     if (aDone && bDone) return a.finishTime - b.finishTime;
     if (aDone !== bDone) return aDone ? -1 : 1;
@@ -1052,6 +1114,7 @@ function raceEntries() {
 function updateRaceOrder(force = false, dt = 0) {
   orderUpdate -= dt; if (!force && orderUpdate > 0) return; orderUpdate = .16;
   const order = raceEntries(), leader = order[0]; state.position = order.findIndex(entry => entry.id === 'player') + 1; ui.position.textContent = String(state.position);
+  standingRows.forEach((row, index) => { row.hidden = index >= order.length; });
   order.forEach((entry, index) => {
     const row = standingRows[index]; row.classList.toggle('player', entry.id === 'player'); row.querySelector('.standing-place').textContent = `P${index + 1}`; row.querySelector('.standing-name').textContent = entry.name;
     row.querySelector('.standing-gap').textContent = Number.isFinite(entry.finishTime) ? 'FIN' : index === 0 ? 'LEADER' : `+${Math.max(0, Math.round((leader.progress - entry.progress) * TRACK_LENGTH))}m`;
@@ -1136,7 +1199,7 @@ function updatePhysics(dt) {
 
 function resolveBotContacts() {
   if (state.phase !== 'racing') return;
-  for (const bot of bots) {
+  for (const bot of activeBots()) {
     const dx = state.x - bot.group.position.x, dz = state.z - bot.group.position.z, distanceSq = dx * dx + dz * dz, radius = Math.min(2.5, activeVehicle.radius + 1.05);
     if (distanceSq > .001 && distanceSq < radius * radius) {
       const distance = Math.sqrt(distanceSq), nx = dx / distance, nz = dz / distance, overlap = radius - distance;
@@ -1202,7 +1265,7 @@ renderer.domElement.addEventListener('pointerleave', () => { monumentHovered = f
 renderer.domElement.addEventListener('click', event => { if (monumentUnderPointer(event)) window.open(GITHUB_URL, '_blank', 'noopener,noreferrer'); });
 function updateMonument(now) {
   const time = now * .001;
-  animateHeroMonument(heroRig, time, reducedMotionQuery.matches, monumentHovered);
+  animatePanditjiMonument(landmarkRig, time, reducedMotionQuery.matches, monumentHovered);
   const dx = MONUMENT.x - state.x, dz = MONUMENT.z - state.z, distance = Math.hypot(dx, dz);
   const bearing = Math.atan2(dx, dz) - state.yaw;
   ui.signalArrow.style.transform = `rotate(${-bearing * 180 / Math.PI}deg)`;
@@ -1210,7 +1273,7 @@ function updateMonument(now) {
   const near = distance <= MONUMENT.promptRadius;
   if (near !== monumentNear) {
     monumentNear = near; ui.monumentPrompt.classList.toggle('hidden', !near); ui.monumentPrompt.setAttribute('aria-hidden', String(!near));
-    ui.signalGuide.classList.toggle('locked', near); ui.signalStatus.textContent = near ? 'CINEMATIC UNLOCKED' : 'FOLLOW THE SKY BEACON';
+    ui.signalGuide.classList.toggle('locked', near); ui.signalStatus.textContent = near ? 'GALLERY UNLOCKED' : 'FOLLOW THE LIGHT BEACON';
     document.body.classList.toggle('near-monument', near);
   }
 }
@@ -1239,7 +1302,7 @@ function frame(now) {
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
   if (heroExperienceOpen) return;
   updateSteeringWheel(dt, now);
-  if (bootReady && !garageOpen && !controlSettingsOpen && !heroExperienceOpen) {
+  if (bootReady && !nameSetupOpen && !garageOpen && !controlSettingsOpen && !heroExperienceOpen) {
     if (state.phase === 'countdown') {
       state.countdown -= dt;
       if (state.countdown > 0) setCountdown(String(Math.ceil(state.countdown)), 'GET READY');
@@ -1258,4 +1321,4 @@ function frame(now) {
 }
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setPixelRatio(Math.min(devicePixelRatio, pixelRatioCap())); renderer.setSize(innerWidth, innerHeight); });
 document.addEventListener('visibilitychange', () => { previous = performance.now(); });
-restartRace(); requestAnimationFrame(frame);
+refreshRacerUi(); setPlayerSetup(nameSetupOpen); restartRace(); requestAnimationFrame(frame);

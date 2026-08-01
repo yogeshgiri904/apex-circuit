@@ -1,4 +1,4 @@
-# Apex Circuit
+# Panditji Ki Race
 
 A compact procedural arcade racer built with Three.js and Vite. There is no backend, asset pipeline, or server-side code.
 
@@ -25,11 +25,11 @@ npm run build
 - **Space**: handbrake / drift
 - **R**: restart the race
 - **G**: open the vehicle garage
-- Touch controls appear on mobile and touch-capable devices: drag the analog pad to steer, hold **GO** to accelerate, use **BRAKE** for braking/reverse, and hold **DRIFT** for the handbrake. **AUTO** toggles cruise acceleration. Tap the **STEER LEFT / STEER RIGHT** layout control to mirror the pad, pedals, cruise button, and speed readout; the preference is saved on the device.
+- Touch controls appear on mobile and touch-capable devices: rotate the round steering wheel, hold the tall **GO** pedal to accelerate, use the wider **BRAKE / REVERSE** pedal, and hold **E-BRAKE** to drift. **AUTO** toggles cruise acceleration. Tap **STEER LEFT / STEER RIGHT** to mirror the wheel, pedals, auxiliary controls, and speed readout; the preference is saved on the device.
 
 ## Vehicle garage
 
-The in-race garage contains eight procedural vehicles with separate speed, acceleration, braking, grip, steering, camera, and animation profiles: Apex GT, a Lamborghini-inspired V12 supercar, Mahindra Scorpio-N- and Thar-inspired SUVs, a sprint bicycle, heritage tanga, freight truck, and track aeroplane. The branded choices are stylized interpretations without manufacturer logos or affiliation. Selecting a vehicle starts a fresh countdown.
+The in-race garage contains eight procedural vehicles with separate speed, acceleration, braking, grip, steering, camera, and animation profiles: Panditji GT, a Lamborghini-inspired V12 supercar, Mahindra Scorpio-N- and Thar-inspired SUVs, a sprint bicycle, heritage tanga, freight truck, and track aeroplane. The branded choices are stylized interpretations without manufacturer logos or affiliation. Selecting a vehicle starts a fresh countdown.
 
 ## Competitive race and pickups
 
@@ -46,13 +46,13 @@ Six procedural pickup families appear around the racing line and respawn after c
 
 Fuel and the two-minute time bank are shown in the systems panel. Running out of fuel leaves a reduced limp mode; running out of time ends the attempt. Active effects and pickup confirmations are shown in the HUD.
 
-The asphalt is now an open racing line with no curbs, guardrails, shoulder collision, or off-road speed penalty. Drivers can leave the circuit and cross the meadow freely. Competitive checkpoint progress is counted only near the racing surface. A sky beacon marks **Meridian**, an original procedural superhero monument in the center of the infield. Drive beside it to unlock its cinematic presentation or click the statue / maker link to open [Yogesh Giri's GitHub profile](https://github.com/yogeshgiri904).
+The asphalt is now an open racing line with no curbs, guardrails, shoulder collision, or off-road speed penalty. Drivers can leave the circuit and cross the meadow freely. Competitive checkpoint progress is counted only near the racing surface. A light beacon marks the **PANDITJI** dimensional wordmark in the center of the infield. Drive beside it to unlock its cinematic gallery or click the landmark / maker link to open [Yogesh Giri's GitHub profile](https://github.com/yogeshgiri904).
 
-## Meridian cinematic monument
+## PANDITJI signature landmark
 
-Meridian is an original sky guardian, not an interpretation of an existing superhero. The shared procedural statue uses midnight titanium, champagne alloy, a prism core, a split ceremonial cape, a polygonal pedestal, illuminated inlays, orbiting shards, a beacon, and additive particles. The in-world landmark stays in the lightweight Three.js race scene.
+The shared procedural landmark is built from custom extruded, beveled **PANDITJI** letter outlines with champagne-alloy faces and dark metallic sidewalls. A broad architectural plinth, illuminated edge inlays, an elliptical light frame, orbiting shards, a beacon, and subtle additive particles complete the composition. The letters and plinth cast and receive shadows in the lightweight Three.js race scene.
 
-The optional cinematic hall is lazy-loaded with React, React Three Fiber, Drei, GSAP, and Tailwind CSS. It provides a foggy futuristic city, dramatic key/rim lighting and shadows, damped orbit controls, three scroll-driven story chapters, camera choreography, model hover/click behavior, a keyboard-accessible chapter rail and close control, a semantic GitHub link, responsive touch layouts, and reduced-motion handling. The underlying race renderer and timer pause while the hall is open.
+The optional signature gallery is lazy-loaded with React, React Three Fiber, Drei, GSAP, and Tailwind CSS. It provides a foggy futuristic city, dramatic key/rim lighting and shadows, damped orbit controls, three scroll-driven story chapters, camera choreography, wordmark hover/click behavior, a keyboard-accessible chapter rail and close control, a semantic GitHub link, responsive touch layouts, and reduced-motion handling. The underlying race renderer and timer pause while the gallery is open.
 
 ## Meadow reserve
 

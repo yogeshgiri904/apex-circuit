@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#102231" />
-    <meta name="description" content="A small, sunlit arcade racing game built with Three.js." />
-    <title>Apex Circuit — Arcade Racer</title>
+    <meta name="description" content="Panditji Ki Race, a sunlit procedural arcade racing game built with Three.js." />
+    <title>Panditji Ki Race — Arcade Racer</title>
     <style>
       html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #102231; }
       body.is-loading > :not(#boot-loader):not(script) { visibility: hidden; }
@@ -14,7 +14,7 @@
       #boot-loader::after { content: ''; position: absolute; inset: 0; opacity: .16; background: repeating-linear-gradient(90deg, transparent 0, transparent 59px, rgba(248,245,237,.09) 60px, transparent 61px); }
       .boot-inner { position: relative; z-index: 1; width: min(380px, calc(100% - 48px)); }
       .boot-kicker { display: block; margin-bottom: 18px; color: #ff9f80; font: 500 10px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .26em; }
-      .boot-brand { display: flex; align-items: center; gap: 13px; font-size: clamp(52px, 12vw, 78px); line-height: .8; font-style: italic; letter-spacing: -.025em; }
+      .boot-brand { display: flex; align-items: center; gap: 13px; font-size: clamp(38px, 10.5vw, 72px); line-height: .8; font-style: italic; letter-spacing: -.025em; }
       .boot-mark { width: 55px; height: 60px; display: grid; place-items: center; color: #102231; background: #ff633c; clip-path: polygon(24% 0, 100% 0, 78% 100%, 0 100%); font: 700 36px Impact, sans-serif; font-style: normal; padding-right: 3px; }
       .boot-brand small { display: block; color: #ff9f80; margin-top: 9px; font: 500 11px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .39em; font-style: normal; }
       .boot-progress { position: relative; height: 3px; margin-top: 42px; overflow: hidden; background: rgba(248,245,237,.14); }
@@ -27,33 +27,33 @@
     </style>
   </head>
   <body class="is-loading" data-control-layout="left">
-    <div id="boot-loader" role="status" aria-live="polite" aria-label="Loading Apex Circuit">
+    <div id="boot-loader" role="status" aria-live="polite" aria-label="Loading Panditji Ki Race">
       <div class="boot-inner">
-        <span class="boot-kicker">APEX MOTORSPORT / 01</span>
-        <div class="boot-brand"><span class="boot-mark">A</span><span>APEX<small>CIRCUIT</small></span></div>
+        <span class="boot-kicker">PANDITJI MOTORSPORT / 01</span>
+        <div class="boot-brand"><span class="boot-mark">P</span><span>PANDITJI<small>KI RACE</small></span></div>
         <div class="boot-progress"><i></i></div>
-        <div class="boot-meta"><span>PREPARING CIRCUIT</span><span>PLEASE WAIT</span></div>
+        <div class="boot-meta"><span>PREPARING THE RACE</span><span>PLEASE WAIT</span></div>
       </div>
     </div>
     <div id="game"></div>
 
     <div class="vignette" aria-hidden="true"></div>
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">A</span><span>APEX<small>CIRCUIT</small></span></div>
+      <div class="brand"><span class="brand-mark">P</span><span>PANDITJI<small>KI RACE</small></span></div>
       <div class="top-actions">
         <div class="race-status"><span class="status-dot"></span><span id="race-label">GRID READY</span></div>
-        <button id="garage-toggle" class="garage-trigger" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="garage-trigger-label">GARAGE</span><strong id="vehicle-name">Apex GT</strong><span class="garage-arrow">↗</span></button>
+        <button id="garage-toggle" class="garage-trigger" type="button" aria-haspopup="dialog" aria-expanded="false"><span class="garage-trigger-label">GARAGE</span><strong id="vehicle-name">Panditji GT</strong><span class="garage-arrow">↗</span></button>
       </div>
     </header>
 
     <section class="hud" aria-label="Race information">
-      <div class="hud-card position-card"><span class="eyebrow">POSITION</span><strong><span id="position">1</span><em>/ 4</em></strong></div>
+      <div class="hud-card position-card"><span class="eyebrow">POSITION</span><strong><span id="position">1</span><em id="field-size">/ 5</em></strong></div>
       <div class="hud-card lap-card"><span class="eyebrow">LAP</span><strong><span id="lap">1</span><em>/ 3</em></strong></div>
       <div class="hud-card timer-card"><span class="eyebrow">RACE TIME</span><strong id="timer">00:00.000</strong><span class="best-label">BEST <span id="best">--:--.---</span></span></div>
     </section>
 
     <aside class="race-tower" aria-label="Live race order">
-      <div class="tower-heading"><span>LIVE ORDER</span><span class="tower-live"><i></i> 4 RACERS</span></div>
+      <div class="tower-heading"><span>LIVE ORDER</span><span id="racer-count" class="tower-live"><i></i> 5 RACERS</span></div>
       <div id="standings" class="standings"></div>
     </aside>
 
@@ -70,14 +70,14 @@
     <div id="pickup-toast" class="pickup-toast hidden" role="status" aria-live="polite"><span id="pickup-symbol" class="pickup-symbol">N</span><div><span id="pickup-title">NITRO</span><small id="pickup-detail">BOOST ENGAGED</small></div></div>
     <div id="wildlife-toast" class="wildlife-toast hidden" role="status" aria-live="polite"><span id="wildlife-symbol" class="wildlife-symbol">✦</span><div><span id="wildlife-title">WILDLIFE NEARBY</span><small id="wildlife-detail">BRAKE FOR CROSSINGS</small></div></div>
 
-    <aside id="signal-guide" class="signal-guide" aria-label="Meridian monument signal">
+    <aside id="signal-guide" class="signal-guide" aria-label="PANDITJI landmark signal">
       <span class="signal-compass"><i id="signal-arrow">↑</i></span>
-      <div class="signal-copy"><span class="signal-kicker">MERIDIAN MONUMENT</span><strong id="signal-distance">-- m</strong><small id="signal-status">FOLLOW THE SKY BEACON</small></div>
+      <div class="signal-copy"><span class="signal-kicker">PANDITJI LANDMARK</span><strong id="signal-distance">-- m</strong><small id="signal-status">FOLLOW THE LIGHT BEACON</small></div>
     </aside>
-    <section id="monument-prompt" class="monument-prompt hidden" aria-hidden="true" aria-label="Meridian monument experience">
-      <div class="monument-prompt-top"><span class="signal-pulse"></span><span>MONUMENT DISCOVERED</span><span class="monument-coordinates">SKY / 01</span></div>
-      <div class="monument-prompt-body"><div class="monument-glyph" aria-hidden="true">◇</div><div><span class="monument-eyebrow">THE ORIGINAL SKY GUARDIAN</span><strong>Meridian</strong><small>Orbit the statue and uncover its story</small></div></div>
-      <button id="hero-explore" class="hero-explore" type="button"><span>Enter cinematic monument</span><span aria-hidden="true">↗</span></button>
+    <section id="monument-prompt" class="monument-prompt hidden" aria-hidden="true" aria-label="PANDITJI landmark experience">
+      <div class="monument-prompt-top"><span class="signal-pulse"></span><span>LANDMARK DISCOVERED</span><span class="monument-coordinates">SIGNATURE / 01</span></div>
+      <div class="monument-prompt-body"><div class="monument-glyph" aria-hidden="true">P</div><div><span class="monument-eyebrow">THE DIMENSIONAL SIGNATURE</span><strong>Panditji</strong><small>Explore the wordmark, light, and shadow</small></div></div>
+      <button id="hero-explore" class="hero-explore" type="button"><span>Enter signature gallery</span><span aria-hidden="true">↗</span></button>
       <a id="github-link" class="github-link github-link-secondary" href="https://github.com/yogeshgiri904" target="_blank" rel="noopener noreferrer"><span>Open maker's GitHub</span><span aria-hidden="true">↗</span></a>
     </section>
 
@@ -97,8 +97,8 @@
       <div class="finish-card">
         <span class="finish-kicker">CHECKERED FLAG</span>
         <h1 id="finish-title">Race complete</h1>
-        <p id="finish-description">You carved through three laps of Apex Circuit.</p>
-        <div class="finish-rank"><span>FINAL POSITION</span><strong id="finish-position">P1</strong><em id="finish-field">/ 4</em></div>
+        <p id="finish-description">You carved through three laps of Panditji Ki Race.</p>
+        <div class="finish-rank"><span>FINAL POSITION</span><strong id="finish-position">P1</strong><em id="finish-field">/ 5</em></div>
         <div class="finish-times"><div><span>TOTAL TIME</span><strong id="finish-time">00:00.000</strong></div><div><span>BEST LAP</span><strong id="finish-best">00:00.000</strong></div></div>
         <button id="restart" class="restart-button" type="button">Race again <span>↗</span></button>
       </div>
@@ -107,7 +107,7 @@
     <div id="garage" class="garage-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="garage-title" aria-hidden="true">
       <div class="garage-panel">
         <div class="garage-header">
-          <div><span class="finish-kicker">APEX MOTOR POOL</span><h2 id="garage-title">Choose your ride</h2><p>Eight procedural machines. One circuit. Pick a class and make it yours.</p></div>
+          <div><span class="finish-kicker">PANDITJI MOTOR POOL</span><h2 id="garage-title">Choose your ride</h2><p>Eight procedural machines. One circuit. Pick a class and make it yours.</p></div>
           <button id="garage-close" class="garage-close" type="button" aria-label="Close garage">×</button>
         </div>
         <div id="garage-filters" class="garage-filters" aria-label="Vehicle categories"></div>
@@ -125,7 +125,7 @@
           <div id="steering-wheel" class="steering-wheel">
             <span class="wheel-rim"><i class="wheel-grip grip-left"></i><i class="wheel-grip grip-right"></i><i class="wheel-center-mark"></i></span>
             <span class="wheel-spoke spoke-left"></span><span class="wheel-spoke spoke-right"></span><span class="wheel-spoke spoke-bottom"></span>
-            <span class="wheel-hub"><b>A</b><i></i></span>
+            <span class="wheel-hub"><b>P</b><i></i></span>
           </div>
         </div>
         <span class="wheel-caption"><span>STEERING</span><b id="steering-angle">0°</b></span>
@@ -152,6 +152,18 @@
         <div class="control-settings-note"><span class="coach-dot"></span> Saved on this device. The race is paused while setup is open.</div>
       </div>
     </div>
+    <section id="player-setup" class="player-setup-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="player-setup-title" aria-hidden="true">
+      <form id="player-setup-card" class="player-setup-card">
+        <span class="player-setup-kicker">PANDITJI KI RACE / DRIVER 01</span>
+        <h1 id="player-setup-title">Who is driving?</h1>
+        <p>Enter your name to build today’s race grid. Akash, Gaurav, Ankit, Vishal, and Bhuvi are ready to compete.</p>
+        <label for="player-name">Driver name</label>
+        <input id="player-name" name="player-name" type="text" maxlength="18" autocomplete="name" placeholder="Your name" required />
+        <small id="player-setup-note" class="player-setup-note">A listed name races as you; the other four become bots.</small>
+        <button type="submit" class="player-setup-submit">Start racing <span aria-hidden="true">↗</span></button>
+        <small class="player-setup-cache">Saved on this device — you will not be asked again.</small>
+      </form>
+    </section>
     <div id="hero-root"></div>
 
     <script type="module" src="/src/main.js"></script>

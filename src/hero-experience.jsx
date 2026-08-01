@@ -5,7 +5,7 @@ import { ContactShadows, OrbitControls, useCursor } from '@react-three/drei';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import * as THREE from 'three';
-import { animateHeroMonument, createHeroMonument, GITHUB_URL } from './hero-statue.js';
+import { animatePanditjiMonument, createPanditjiMonument, GITHUB_URL } from './panditji-monument.js';
 import './hero-experience.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -20,10 +20,10 @@ function useReducedMotion() {
 }
 
 function HeroModel({ reducedMotion, onHover }) {
-  const rig = useMemo(() => createHeroMonument(), []);
+  const rig = useMemo(() => createPanditjiMonument(), []);
   const [hovered, setHovered] = useState(false);
   useCursor(hovered, 'pointer', 'auto');
-  useFrame(({ clock }) => animateHeroMonument(rig, clock.elapsedTime, reducedMotion, hovered));
+  useFrame(({ clock }) => animatePanditjiMonument(rig, clock.elapsedTime, reducedMotion, hovered));
   const updateHover = value => { setHovered(value); onHover(value); };
   return (
     <primitive
@@ -69,10 +69,12 @@ function CameraChoreography({ progress, controlsRef, interactionUntil, reducedMo
   useFrame((_, dt) => {
     if (Date.now() < interactionUntil.current) return;
     const p = progress.current.value, portrait = size.height > size.width;
-    const azimuth = -.28 + p * 1.04, distance = (portrait ? 25.5 : 22.5) - Math.sin(p * Math.PI) * 4.2;
-    const height = 8.6 + p * 3.7 - Math.sin(p * Math.PI) * 1.1;
+    const targetFov = portrait ? 62 : 45;
+    if (Math.abs(camera.fov - targetFov) > .01) { camera.fov = targetFov; camera.updateProjectionMatrix(); }
+    const azimuth = -.22 + p * .7, distance = (portrait ? 31.5 : 25.5) - Math.sin(p * Math.PI) * (portrait ? 2.5 : 3.4);
+    const height = (portrait ? 8.4 : 7.8) + p * 2.2 - Math.sin(p * Math.PI) * .72;
     desired.set(Math.sin(azimuth) * distance, height, Math.cos(azimuth) * distance);
-    target.set(0, 6.1 + p * 1.2, 0);
+    target.set(portrait ? 0 : -4.2, (portrait ? 2.95 : 4.05) + p * .48, 0);
     const blend = reducedMotion ? 1 : 1 - Math.exp(-dt * 3.2);
     camera.position.lerp(desired, blend);
     if (controlsRef.current) { controlsRef.current.target.lerp(target, blend); controlsRef.current.update(); } else camera.lookAt(target);
@@ -82,37 +84,39 @@ function CameraChoreography({ progress, controlsRef, interactionUntil, reducedMo
 
 function HeroScene({ progress, reducedMotion, onHover }) {
   const controlsRef = useRef(), interactionUntil = useRef(0);
+  const portrait = window.innerHeight > window.innerWidth;
   return (
     <Canvas
       className="hero-canvas"
       shadows
       dpr={[1, window.matchMedia('(pointer: coarse)').matches ? 1.35 : 1.65]}
-      camera={{ position: [-6, 9, 23], fov: 45, near: .1, far: 150 }}
+      camera={{ position: portrait ? [-6.87, 8.4, 30.74] : [-5.56, 7.8, 24.88], fov: portrait ? 62 : 45, near: .1, far: 150 }}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => { gl.outputColorSpace = THREE.SRGBColorSpace; gl.toneMapping = THREE.ACESFilmicToneMapping; gl.toneMappingExposure = 1.16; }}
       role="img"
-      aria-label="Meridian, an original superhero monument in a futuristic city"
+      aria-label="PANDITJI, a dimensional wordmark landmark in a futuristic city"
     >
       <color attach="background" args={['#07131f']} />
       <fog attach="fog" args={['#0a1b2a', 28, 92]} />
       <hemisphereLight args={['#9dbdd2', '#111821', .62]} />
       <ambientLight intensity={.22} />
-      <directionalLight position={[-12, 24, 14]} intensity={2.8} color="#f5d5a4" castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-18} shadow-camera-right={18} shadow-camera-top={20} shadow-camera-bottom={-8} shadow-bias={-.00035} />
+      <directionalLight position={[-12, 24, 14]} intensity={2.8} color="#f5d5a4" castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-20} shadow-camera-right={20} shadow-camera-top={18} shadow-camera-bottom={-9} shadow-bias={-.00035} shadow-normalBias={.018} />
+      <directionalLight position={[8, 11, 18]} intensity={1.05} color="#ffe6b4" />
       <spotLight position={[10, 18, -8]} angle={.46} penumbra={.8} intensity={125} distance={50} color="#58cbd0" />
       <pointLight position={[-8, 5, 8]} intensity={28} distance={34} color="#dca85d" />
       <HeroModel reducedMotion={reducedMotion} onHover={onHover} />
       <CityBackdrop />
-      <ContactShadows position={[0, .012, 0]} opacity={.45} scale={35} blur={2.2} far={12} resolution={512} frames={1} />
-      <OrbitControls ref={controlsRef} makeDefault enablePan={false} enableDamping dampingFactor={.075} minDistance={11} maxDistance={32} minPolarAngle={.35} maxPolarAngle={1.52} target={[0, 6.4, 0]} onStart={() => { interactionUntil.current = Infinity; }} onEnd={() => { interactionUntil.current = Date.now() + 1800; }} />
+      <ContactShadows position={[0, .012, 0]} opacity={.48} scale={36} blur={2} far={10} resolution={512} frames={1} />
+      <OrbitControls ref={controlsRef} makeDefault enablePan={false} enableDamping dampingFactor={.075} minDistance={13} maxDistance={42} minPolarAngle={.35} maxPolarAngle={1.52} target={portrait ? [0, 2.95, 0] : [-4.2, 4.05, 0]} onStart={() => { interactionUntil.current = Infinity; }} onEnd={() => { interactionUntil.current = Date.now() + 1800; }} />
       <CameraChoreography progress={progress} controlsRef={controlsRef} interactionUntil={interactionUntil} reducedMotion={reducedMotion} />
     </Canvas>
   );
 }
 
 const CHAPTERS = [
-  { index: '01', label: 'THE ARRIVAL', title: 'A guardian for the open sky', copy: 'Meridian stands where the circuit meets the horizon: an original hero built from courage, curiosity, and forward motion.' },
-  { index: '02', label: 'SKY-FORGED', title: 'Armor shaped by light', copy: 'Champagne alloy, midnight titanium, and a living prism form a silhouette designed for this world alone.' },
-  { index: '03', label: 'THE SIGNAL', title: 'Build what comes next', copy: 'Every horizon is an invitation. Follow the maker behind the circuit and explore the work beyond this monument.' },
+  { index: '01', label: 'THE SIGNATURE', title: 'A name in motion', copy: 'PANDITJI stands at the heart of the open circuit: a dimensional signature shaped for speed, curiosity, and craft.' },
+  { index: '02', label: 'THE CRAFT', title: 'Light, depth and shadow', copy: 'Beveled champagne faces, dark metallic sidewalls, and an illuminated architectural frame turn each letter into a small sculpture.' },
+  { index: '03', label: 'THE MAKER', title: 'Beyond the circuit', copy: 'A signature is a starting line. Follow the maker behind this world and explore what is being built beyond the track.' },
 ];
 
 function HeroExperience({ onClose }) {
@@ -151,10 +155,10 @@ function HeroExperience({ onClose }) {
       <HeroScene progress={progress} reducedMotion={reducedMotion} onHover={setHovered} />
       <div className="hero-wash" aria-hidden="true" />
       <header className="hero-header absolute flex items-center justify-between">
-        <div className="flex items-center gap-3"><span className="hero-mark">M</span><div><span className="hero-header-kicker">APEX / MONUMENT 01</span><strong className="hero-header-name">MERIDIAN</strong></div></div>
+        <div className="flex items-center gap-3"><span className="hero-mark">P</span><div><span className="hero-header-kicker">PANDITJI / SIGNATURE 01</span><strong className="hero-header-name">PANDITJI</strong></div></div>
         <button ref={closeRef} className="hero-close flex items-center gap-2" type="button" onClick={onClose} aria-label="Close monument and return to race"><span>RETURN TO RACE</span><b aria-hidden="true">×</b></button>
       </header>
-      <div className={`hero-hover-hint ${hovered ? 'visible' : ''}`} aria-hidden="true"><span>CLICK THE GUARDIAN</span><i>↗</i></div>
+      <div className={`hero-hover-hint ${hovered ? 'visible' : ''}`} aria-hidden="true"><span>CLICK THE WORDMARK</span><i>↗</i></div>
       <nav className="hero-rail" aria-label="Monument story chapters">
         {CHAPTERS.map((item, index) => <button key={item.index} type="button" className={chapter === index ? 'active' : ''} onClick={() => goToChapter(index)} aria-label={`Go to chapter ${item.index}: ${item.label}`} aria-current={chapter === index ? 'step' : undefined}><span>{item.index}</span><i /></button>)}
       </nav>
@@ -166,13 +170,13 @@ function HeroExperience({ onClose }) {
               <h1 id={index === 0 ? 'hero-title' : undefined}>{item.title}</h1>
               <p>{item.copy}</p>
               {index === 0 && <div className="hero-instruction"><span className="hero-instruction-dot" /> SCROLL TO DISCOVER <em>·</em> DRAG TO ORBIT</div>}
-              {index === 1 && <div className="hero-materials flex flex-wrap gap-2"><span>CHAMPAGNE ALLOY</span><span>MIDNIGHT TITANIUM</span><span>PRISM CORE</span></div>}
+              {index === 1 && <div className="hero-materials flex flex-wrap gap-2"><span>BRUSHED CHAMPAGNE</span><span>DARK TITANIUM</span><span>EDGE LIGHT</span></div>}
               {index === 2 && <a className="hero-github flex items-center justify-between" href={GITHUB_URL} target="_blank" rel="noopener noreferrer"><span>Explore Yogesh Giri on GitHub</span><b aria-hidden="true">↗</b></a>}
             </div>
           </article>
         ))}
       </div>
-      <div className="hero-stage-note"><span className="hero-stage-line" /> <span>{reducedMotion ? 'REDUCED MOTION ACTIVE' : 'DRAG THE SCULPTURE TO ORBIT'}</span></div>
+      <div className="hero-stage-note"><span className="hero-stage-line" /> <span>{reducedMotion ? 'REDUCED MOTION ACTIVE' : 'DRAG THE WORDMARK TO ORBIT'}</span></div>
       <div className="hero-progress" aria-hidden="true"><i style={{ transform: `scaleX(${(chapter + 1) / 3})` }} /></div>
     </section>
   );
